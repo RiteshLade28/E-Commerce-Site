@@ -21,7 +21,7 @@ export default function Home() {
   }, []);
 
   return (
-    <Box
+    <Box  
       marginLeft={"100px"}
       marginRight={"100px"}
       marginTop={"10px"}
@@ -31,9 +31,8 @@ export default function Home() {
         <Offers />
       </Grid>
       <Grid container spacing={3} marginTop={"20px"}>
-        {categoryProducts &&
-          categoryProducts.map((category, categoryIndex) => (
-            <React.Fragment key={categoryIndex}>
+        {categoryProducts ?.map((category) => (
+            <React.Fragment key={category.number}>
               <Grid item lg={12}>
                 <Typography
                   variant="h5"
@@ -43,8 +42,8 @@ export default function Home() {
                   {category.categoryName}
                 </Typography>
               </Grid>
-              {category.products.map((item, itemIndex) => (
-                <Grid item key={itemIndex}>
+              {category.products.map((item) => (
+                <Grid item key={item.number}>
                   <ProductCard
                     productId={item.productId}
                     category={item.category}

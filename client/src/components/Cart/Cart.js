@@ -1,3 +1,12 @@
+/**
+ * This is a React component that displays a shopping cart with items and their details, and an order
+ * summary.
+ * @returns The ShoppingCart component is being returned, which renders a container with two Grid
+ * items. The first Grid item displays a list of ShoppingCartItems, which are mapped from the items
+ * state using the formattedData property. The second Grid item displays an OrderSummaryItem, which
+ * receives the total price and total items from the items state. The component also makes an API call
+ * to update the items state using the updateData function
+ */
 import React, { useEffect, useState } from "react";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Container from "@material-ui/core/Container";
@@ -32,10 +41,9 @@ export default function ShoppingCart() {
       <Container>
         <Grid container spacing={3}>
           <Grid item lg={7}>
-            {items &&
-              items.formattedData &&
-              items.formattedData.map((item, index) => (
-                <Grid item key={index}>
+            {items ?.formattedData &&
+              items.formattedData.map((item) => (
+                <Grid item key={item.number}>
                   <ShoppingCartItem
                     productId={item.productId}
                     category={item.category}

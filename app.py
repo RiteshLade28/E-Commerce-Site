@@ -12,6 +12,26 @@ route = "/api"
 
 @app.route(route + '/products/')
 def getProducts():
+    productId = request.args.get('id')
+    if productId:
+        with sqlite3.connect('ecart.db') as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT p.productId, p.name, p.price, p.image, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
+            itemData = cur.fetchall()
+
+        if itemData:
+            productId, name, price, image, categoryId, categoryName = itemData[0]
+            product = {
+                'productId': productId,
+                'categoryId': categoryId,
+                'name': name,
+                'price': price,
+                'image': image
+            }
+            return jsonify(product)
+        # else:
+        #     return jsonify({})  # Return an empty response if the product is not found
+
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute('SELECT p.productId, p.name, p.price, p.image, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId')
@@ -39,6 +59,7 @@ def getProducts():
         })
 
     return jsonify(formattedData)
+
 
 @app.route(route + '/products/', methods=["POST"])
 def addProduct():
@@ -160,7 +181,7 @@ def removeFromCart():
 def updateQuantity():
     productId = request.args.get('id')
     new_quantity = request.headers.get('quantity')
-    
+
     print(new_quantity)
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
@@ -168,15 +189,24 @@ def updateQuantity():
             cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId))
             msg = "Quantity updated successfully"
             conn.commit()
+            cur.execute(
+                '''SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity 
+                   FROM products
+                   JOIN kart ON kart.productId = products.productId
+                   JOIN categories ON products.categoryId = categories.categoryId
+                   WHERE kart.productId = ?''', (productId,)
+            )
+            product = cur.fetchall()
             status_code = 200
-        except:
+        except Exception as e:
             conn.rollback()
             msg = "Error occurred"
             status_code = 500
             traceback.print_exc()  # Print the traceback for debugging purposes
 
     conn.close()
-    return make_response(msg, status_code)
+    return make_response(jsonify(product=product, message=msg), status_code)
+
     
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
   cover: {
     width: 200,
     height: 200, // Add this line
-    backgroundSize: "contain",
+    backgroundSize: "contain"
   },
 }));
 
@@ -65,29 +65,34 @@ export default function ShoppingCartItem({
   };
 
   const updateQuantity = (productId, quantity) => {
-    apiClient
-      .patch(urls.cart.update.replace("{id}", productId), null, {
-        headers: {
-          quantity: quantity,
-        },
-        params: {
-          id: productId,
-        },
-      })
-      .then((response) => {
-        console.log(response.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    return new Promise((resolve, reject) => {
+      apiClient
+        .patch(urls.cart.update.replace("{id}", productId), null, {
+          headers: {
+            quantity: quantity,
+          },
+        })
+        .then((response) => {
+          console.log(response.data);
+          resolve(response.data);  // Resolve the promise with the response data
+        })
+        .catch((error) => {
+          console.log(error);
+          reject(error); // Reject the promise with the error
+        });
+    });
   };
 
   useEffect(() => {
     if (itemQuantity < 1) {
-      setItemQuantity(1); 
+      setItemQuantity(1);
     } else {
-      updateQuantity(productId, itemQuantity);
-      updateData();
+      updateQuantity(productId, itemQuantity)
+        .then(() => updateData())
+        .catch((error) => {
+          // Handle error during updateQuantity
+          console.error(error);
+        });
     }
   }, [itemQuantity]);
 
@@ -108,7 +113,13 @@ export default function ShoppingCartItem({
             <CardMedia
               className={classes.cover}
               image={image}
+              component={"img"}
               title="Live from space album cover"
+              style={{
+                objectFit: "contain",
+                height: "200px",
+                width: "200px",
+              }}
             />
           </Grid>
           <Grid item lg={8}>
