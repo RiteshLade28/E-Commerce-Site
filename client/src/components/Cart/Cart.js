@@ -3,6 +3,7 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import Container from "@material-ui/core/Container";
 import Grid from "@material-ui/core/Grid";
 import OrderSummaryItem from "./OrderSummaryItem";
+import Temp from "./temp.js";
 import ShoppingCartItem from "./ShoppingCartItem";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
@@ -10,16 +11,20 @@ import urls from "../../apis/urls";
 export default function ShoppingCart() {
   const [items, setItems] = useState([]);
 
-  useEffect(() => {
+  const updateData = () => {
     apiClient
-      .get(urls.cart.get) // localhost:5000/api/cart
+      .get(urls.cart.get)
       .then((response) => {
+        console.log(response.data);
         setItems(response.data);
       })
       .catch((error) => {
         console.log(error);
       });
-    // console.log(items);
+  };
+
+  useEffect(() => {
+    updateData();
   }, []);
 
   return (
@@ -27,21 +32,28 @@ export default function ShoppingCart() {
       <CssBaseline />
       <Container>
         <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={7} lg={7}>
-            {items.map((item, index) => (
-              <Grid item key={index}>
-                <ShoppingCartItem
-                  category={item.category}
-                  itemName={item.itemName}
-                  quantity={item.quantity}
-                  price={item.price}
-                  image={item.image}
-                />
-              </Grid>
-            ))}
+          <Grid item lg={7}>
+            {items &&
+              items.formattedData &&
+              items.formattedData.map((item, index) => (
+                <Grid item key={index}>
+                  <ShoppingCartItem
+                    productId={item.productId}
+                    category={item.category}
+                    itemName={item.itemName}
+                    quantity={item.quantity}
+                    price={item.price}
+                    image={item.image}
+                    updateData={updateData}
+                  />
+                </Grid>
+              ))}
           </Grid>
-          <Grid item xs={12} sm={6} md={5} lg={5}>
-            <OrderSummaryItem />
+          <Grid item lg={5}>
+            <OrderSummaryItem
+              price={items ? items.totalPrice : 0}
+              totalItems={items ? items.totalItems : 0}
+            />
           </Grid>
         </Grid>
       </Container>

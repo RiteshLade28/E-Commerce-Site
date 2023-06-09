@@ -1,11 +1,10 @@
 import React from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Card from "@material-ui/core/Card";
-import CardActions from "@material-ui/core/CardActions";
-import CardContent from "@material-ui/core/CardContent";
-import Button from "@material-ui/core/Button";
-import Typography from "@material-ui/core/Typography";
-import Grid from "@material-ui/core/Grid";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import { makeStyles } from "@mui/styles";
+import { Grid, Button } from "@mui/material";
 
 const useStyles = makeStyles({
   root: {
@@ -14,64 +13,70 @@ const useStyles = makeStyles({
     minWidth: "275",
     zIndex: 1,
   },
-
   title: {
     fontSize: 14,
   },
   pos: {
     marginBottom: 12,
   },
+  cardActions: {
+    marginTop: "auto",
+  },
 });
 
-export default function OrderSummaryItem() {
+export default function MediaCard({ price, totalItems }) {
   const classes = useStyles();
-
+  const shippingPrice = totalItems ? 100: 0;
   return (
     <Card className={classes.root} elevation={15}>
-      <CardContent>
-        <Typography
-          className={classes.title}
-          color="textSecondary"
-          gutterBottom
-        >
-          Shopping Cart
-        </Typography>
-        <Typography variant="div" component="h1">
-          {" "}
-          Order Summary
-        </Typography>
-        <Typography variant="subtitle2">
-          <hr />
-        </Typography>
-        <Grid container>
-          <Grid item xs={11} sm={11} md={11} lg={11}>
-            <Typography variant="body1" component="div">
-              Shipping
+      <Grid container>
+        <Grid item lg={12}>
+          <CardContent>
+            <Typography
+              className={classes.title}
+              color="textSecondary"
+              gutterBottom
+            >
+              Shopping Cart
             </Typography>
-          </Grid>
-          <Grid item xs={1} sm={1} md={1} lg={1}>
-            <Typography variant="h6" component="div">
-              ₹0
+            <Typography variant="div" component="h1">
+              Order Summary
             </Typography>
-          </Grid>
-          <Grid item xs={11} sm={11} md={11} lg={11}>
-            <Typography variant="body1" component="div">
-              Total
+            <Typography variant="subtitle2">
+              <hr />
             </Typography>
-          </Grid>
-          <Grid item xs={1} sm={1} md={1} lg={1}>
-            <Typography variant="h6" component="div">
-              ₹0
-            </Typography>
-          </Grid>
+            <Grid container>
+              <Grid item lg={10}>
+                <Typography variant="body1" component="div">
+                  Shipping
+                </Typography>
+              </Grid>
+              <Grid item lg={2}>
+                <Typography variant="h6" component="div">
+                  ₹{shippingPrice}
+                </Typography>
+              </Grid>
+              <Grid item lg={10}>
+                <Typography variant="body1" component="div">
+                  Total
+                </Typography>
+              </Grid>
+              <Grid item lg={2}>
+                <Typography variant="h6" component="div">
+                  ₹{price + shippingPrice}
+                </Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
         </Grid>
-      </CardContent>
-
-      <CardActions>
-        <Button size="large" color="secondary">
-          BUY NOW ({1})
-        </Button>
-      </CardActions>
+        <Grid item lg={12}>
+          <CardActions className={classes.cardActions}>
+            <Button size="large" color="secondary">
+              BUY NOW ({totalItems})
+            </Button>
+          </CardActions>
+        </Grid>
+      </Grid>
     </Card>
   );
 }

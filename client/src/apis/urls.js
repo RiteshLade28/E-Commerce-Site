@@ -8,8 +8,8 @@ const urls = {
     },
     cart: {
       get: "/cartItems/",
-      create: "/cartItem/",
-      update: "/updateCartItem/",
+      create: "/cartItem?id={id}",
+      update: "/cartItem?id={id}",
       delete: "/cartItem?id={id}",
     },
     product: {
