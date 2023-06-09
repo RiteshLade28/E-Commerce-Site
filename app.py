@@ -1,92 +1,184 @@
 from markupsafe import escape
-from flask import Flask, abort, render_template, make_response, jsonify
+import sqlite3
+from flask import Flask, abort, render_template, make_response, jsonify, request
 from flask_cors import CORS
+import traceback
 
 app = Flask(__name__)
 CORS(app)
 
+
 route = "/api"
-
-items = [
-    {
-        "category": "Electronics", 
-        "itemName": "Mobile",
-        "quantity": 1,
-        "price": 10000,
-        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1KdhxxNo9tu4SRc2T9iYmjupEDjif_ldwlTzuc0bcNUpKUfj6khn1C70MhG8E57ph_Z4&usqp=CAU"
-    },
-    {
-        "category": "Electronics", 
-        "itemName": "Headphone",
-        "quantity": 1,
-        "price": 1000,
-        "image": "https://www.skullcandy.in/wp-content/uploads/2021/07/Riff_S5PXY-L003_Black_Hero_v007.jpg"
-    },
-]
-
-products = [
-    {
-        "id": 1,
-        "category": "Electronics", 
-        "itemName": "Mobile",
-        "price": 10000,
-        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1KdhxxNo9tu4SRc2T9iYmjupEDjif_ldwlTzuc0bcNUpKUfj6khn1C70MhG8E57ph_Z4&usqp=CAU"
-    },
-    {
-        "id": 2,
-        "category": "Electronics", 
-        "itemName": "Headphone",
-        "price": 1000,
-        "image": "https://www.skullcandy.in/wp-content/uploads/2021/07/Riff_S5PXY-L003_Black_Hero_v007.jpg"
-    },
-    {
-        "id": 3,
-        "category": "Electronics", 
-        "itemName": "Charger",
-        "price": 500,
-        "image": "https://m.media-amazon.com/images/I/61CvDggHJmL.jpg"
-    },
-    {
-        "id": 4,
-        "category": "Electronics", 
-        "itemName": "Laptop",
-        "price": 100000,
-        "image": "https://www.lenovo.com/medias/lenovo-laptop-legion-5-15-intel-subseries-hero.png?context=bWFzdGVyfHJvb3R8MzA2MjM2fGltYWdlL3BuZ3xoOGUvaDI2LzE0MzMyNjk1MzE0NDYyLnBuZ3w0NTQ5M2UyMWNkNjIyYmEzNmI0MWM0YTU4MjM0YjcxZmZhNTAxZThiZWE2OTUwNDJjOTQ2MDI3NWY3YzA3NzNm"
-    },
-    {
-        "id": 5,
-        "category": "Electronics", 
-        "itemName": "Fan",
-        "price": 2500,
-        "image": "https://cdn.moglix.com/p/3we7mCoJz4PXz.jpg"
-    }
-]
-
 
 @app.route(route + '/products/')
 def getProducts():
-    return make_response(jsonify(products))
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT p.productId, p.name, p.price, p.image, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId')
+        itemData = cur.fetchall()
+
+    categoryData = {}
+    for item in itemData:
+        productId, name, price, image, categoryId, categoryName = item
+        if categoryId not in categoryData:
+            categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
+        categoryData[categoryId]['products'].append({
+            'productId': productId,
+            'categoryId': categoryId,
+            'name': name,
+            'price': price,
+            'image': image
+        })
+
+    formattedData = []
+    for categoryId, categoryInfo in categoryData.items():
+        formattedData.append({
+            'categoryId': categoryId,
+            'categoryName': categoryInfo['categoryName'],
+            'products': categoryInfo['products']
+        })
+
+    return jsonify(formattedData)
+
+@app.route(route + '/products/', methods=["POST"])
+def addProduct():
+    new_quantity = request.headers.get('quantity')
+    with sqlite3.connect('ecart.db') as conn:
+        product = request.get_json()
+        print(product["itemName"])
+        cur = conn.cursor()
+        try:
+            # If the product doesn't exist, add a new entry with quantity 1
+            cur.execute('''INSERT INTO products (name, price, image, categoryId) VALUES (?, ?, ?, ?)''', (product["itemName"], product["price"], product["image"], product["categoryId"],))
+            msg = "Added successfully"
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()  # Print the traceback for debugging purposes
+
+    conn.close()
+    return make_response(msg, status_code)
 
 @app.route(route + '/cartItems/')
 def cartItems():
-    return make_response(jsonify(items))
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity FROM products, kart, categories WHERE products.productId = kart.productId AND products.categoryId = categories.categoryId"
+        )
+        products = cur.fetchall()
 
-@app.route('/cart/')
-def cart():
-    return render_template('cart.html')
+    totalPrice = 0
+    totalItems = 0
+    for row in products:
+        quantity = row[5]
+        totalPrice += row[2] * quantity
+        totalItems += row[5]
 
-@app.route('/addItem/')
-def addItem():
-    return '<h1>Item added to cart</h1>'
+    formattedData = []
+    for item in products:
+        productId, name, price, image, categoryName, quantity = item
+        formattedData.append({
+            'productId': productId,
+            'itemName': name,
+            'price': price,
+            'image': image,
+            'category': categoryName,
+            'quantity': quantity
+        })
 
-@app.route('/removeItem/')
-def removeItem():
-    return '<h1>Item removed from cart</h1>'
+    response = {
+        'formattedData': formattedData,
+        'totalPrice': totalPrice,
+        'totalItems': totalItems
+    }
+    print("items " + str(totalItems))
+    return jsonify(response)
 
-@app.route('/productDes/<int:product_id>/')
-def showProductDescription(product_id):
-    return '<h1>Show product description of product {}</h1>'.format(product_id)
+@app.route(route + "/cartItem", methods=["OPTIONS"])
+def handleCartItemOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
-@app.errorhandler(404)
-def page_not_found(error):
-    return "<h1>404 not found</h1>"
+@app.route(route + "/cartItem", methods=["POST"])
+def addToCart():
+    productId = request.args.get('id')
+    print(productId)
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            # Check if the product already exists in the cart
+            cur.execute("SELECT productId, quantity FROM kart WHERE productId = ?", (productId,))
+            existing_product = cur.fetchone()
+
+            if existing_product:
+                # If the product already exists, update the quantity by 1
+                new_quantity = existing_product[1] + 1
+                cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId))
+
+                msg = "Quantity updated successfully"
+            else:
+                # If the product doesn't exist, add a new entry with quantity 1
+                cur.execute("INSERT INTO kart (productId, quantity) VALUES (?, ?)", (productId, 1))
+                msg = "Added successfully"
+
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()  # Print the traceback for debugging purposes
+
+    conn.close()
+    return make_response(msg, status_code)
+
+@app.route(route + "/cartItem", methods=["DELETE"])    
+def removeFromCart():
+    productId = request.args.get('id')
+    print(productId)
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("DELETE FROM kart WHERE productId = ?", (productId,))
+            conn.commit()
+            msg = "removed successfully"
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "error occurred"
+            status_code = 500
+    conn.close()
+    return make_response(msg, status_code)
+
+@app.route(route + "/cartItem", methods=["PATCH"])
+def updateQuantity():
+    productId = request.args.get('id')
+    new_quantity = request.headers.get('quantity')
+    
+    print(new_quantity)
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId))
+            msg = "Quantity updated successfully"
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()  # Print the traceback for debugging purposes
+
+    conn.close()
+    return make_response(msg, status_code)
+    
+
+if __name__ == "__main__":
+    app.run()
+

@@ -3,7 +3,6 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import Container from "@material-ui/core/Container";
 import Grid from "@material-ui/core/Grid";
 import OrderSummaryItem from "./OrderSummaryItem";
-import Temp from "./temp.js";
 import ShoppingCartItem from "./ShoppingCartItem";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
