@@ -16,17 +16,19 @@ def getProducts():
     if productId:
         with sqlite3.connect('ecart.db') as conn:
             cur = conn.cursor()
-            cur.execute('SELECT p.productId, p.name, p.price, p.image, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
+            cur.execute('SELECT p.productId, p.name, p.price, p.ratings, p.image, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
             itemData = cur.fetchall()
 
         if itemData:
-            productId, name, price, image, categoryId, categoryName = itemData[0]
+            productId, name, price, ratings, image, description, categoryId, categoryName,  = itemData[0]
             product = {
                 'productId': productId,
                 'categoryId': categoryId,
                 'name': name,
                 'price': price,
-                'image': image
+                'ratings': ratings,
+                'image': image,
+                'description': description
             }
             return jsonify(product)
         # else:
@@ -70,7 +72,7 @@ def addProduct():
         cur = conn.cursor()
         try:
             # If the product doesn't exist, add a new entry with quantity 1
-            cur.execute('''INSERT INTO products (name, price, image, categoryId) VALUES (?, ?, ?, ?)''', (product["itemName"], product["price"], product["image"], product["categoryId"],))
+            cur.execute('''INSERT INTO products (name, price, image, ratings, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (product["itemName"], product["price"], product["image"], product["ratings"], product["categoryId"], product["description"], product["stock"]))
             msg = "Added successfully"
             conn.commit()
             status_code = 200

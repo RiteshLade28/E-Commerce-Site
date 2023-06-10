@@ -220,30 +220,18 @@ const ProductDesc = () => {
               alignItems: "center",
             }}
           >
-            <StarIcon style={{ color: "orange" }} />
-            <StarIcon style={{ color: "orange" }} />
-            <StarIcon style={{ color: "orange" }} />
-            <StarIcon style={{ color: "orange" }} />
-            <StarHalfIcon style={{ color: "orange", marginRight: "5px" }} /> 4.5
-            star
+            {Array.from({ length: product.ratings }, (value, index) => (
+              <StarIcon key={index} style={{ color: "orange" }} />
+            ))}
+            {product.ratings % 1 !== 0 && (
+              <StarHalfIcon style={{ color: "orange", marginRight: "5px" }} />
+            )}
+            {product["ratings"]}
           </Typography>
           <Typography variant="h6" style={{ marginBottom: "10px" }}>
             Description
           </Typography>
-          <Typography variant="body1">
-            Lorem, ipsum dolor sit amet consectetur adipisicing elit. Tempora
-            fugit cumque porro et sed iste labore commodi earum a laudantium
-            libero cupiditate sunt, vero assumenda, nesciunt facilis itaque quis
-            suscipit minima! Sed quaerat aliquam, vel commodi pariatur, fuga
-            quibusdam rem perspiciatis eos facilis sint doloremque dolore in
-            recusandae animi tempore nostrum ducimus adipisci magni quo nesciunt
-            unde? Cumque praesentium voluptatem reiciendis assumenda beatae
-            saepe, aliquam debitis ipsa ab culpa voluptatum veritatis!
-            Blanditiis molestiae delectus dicta ad, est a aut tenetur ullam
-            placeat aspernatur reiciendis quae libero illum officia accusantium
-            nesciunt recusandae laudantium, iste dolores, repudiandae voluptatum
-            porro dolor. Animi, dolor!
-          </Typography>
+          <Typography variant="body1">{product["description"]}</Typography>
         </Grid>
       </Grid>
       <Grid
