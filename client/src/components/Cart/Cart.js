@@ -15,13 +15,19 @@ import OrderSummaryItem from "./OrderSummaryItem";
 import ShoppingCartItem from "./ShoppingCartItem";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
+import Cookies from "js-cookie";
 
 export default function ShoppingCart() {
   const [items, setItems] = useState([]);
 
   const updateData = () => {
+    const token = Cookies.get("token");
     apiClient
-      .get(urls.cart.get)
+      .get(urls.cart.get, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((response) => {
         console.log(response.data);
         setItems(response.data);

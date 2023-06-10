@@ -13,7 +13,7 @@ const urls = {
     delete: "/cartItem?id={id}",
   },
   product: {
-    get: "/products?id={id}",
+    get: "/products/?id={id}",
   },
   user: {
     get: "/auth/users",

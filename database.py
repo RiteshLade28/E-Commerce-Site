@@ -61,17 +61,31 @@ cartItems = [
 
 conn = sqlite3.connect("ecart.db")
 
-conn.execute('''CREATE TABLE products
-		(productId INTEGER PRIMARY KEY,
-		name TEXT,
-		price REAL,
-		ratings REAL,
-		image TEXT,
-		categoryId INTEGER,
-        description TEXT,
-        stock INTEGER,
-		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
-		)''')
+# conn.execute('''CREATE TABLE products
+# 		(productId INTEGER PRIMARY KEY,
+# 		name TEXT,
+# 		price REAL,
+# 		ratings REAL,
+# 		image TEXT,
+# 		categoryId INTEGER,
+#         description TEXT,
+#         stock INTEGER,
+# 		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
+# 		)''')
+
+conn.execute('''CREATE TABLE users 
+		(userId INTEGER PRIMARY KEY, 
+		email TEXT,
+		password TEXT,
+        salt INTEGER,
+		firstName TEXT,
+		lastName TEXT,
+		address TEXT,
+		city TEXT,
+		pincode TEXT,
+		state TEXT,
+		country TEXT
+		)''' )
 
 # conn.execute('''CREATE TABLE categories
 # 		(categoryId INTEGER PRIMARY KEY,
@@ -85,12 +99,12 @@ conn.execute('''CREATE TABLE products
 # 		FOREIGN KEY(productId) REFERENCES products(productId)
 # 		)''')
 
-for product in allProducts:
-	cur = conn.cursor()
-	cur.execute('''INSERT INTO products (name, price, ratings, image, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (product["itemName"], product["price"], product["ratings"], product["image"], product["categoryId"], product["description"], product["stock"]) )
-	conn.commit()
-	msg="added successfully"
-	print(msg)
+# for product in allProducts:
+# 	cur = conn.cursor()
+# 	cur.execute('''INSERT INTO products (name, price, ratings, image, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (product["itemName"], product["price"], product["ratings"], product["image"], product["categoryId"], product["description"], product["stock"]) )
+# 	conn.commit()
+# 	msg="added successfully"
+# 	print(msg)
 
 # for item in cartItems:
 #     cur = conn.cursor()

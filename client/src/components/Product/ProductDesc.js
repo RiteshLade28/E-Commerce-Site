@@ -50,7 +50,9 @@ const ProductDesc = () => {
   const { productId } = useParams();
   const [id, setId] = useState(productId);
   const [product, setProduct] = useState([]);
+  const [categoryName, setCategoryName] = useState("");
   const [categoryProducts, setcategoryProducts] = useState([]);
+
   const classes = useStyles();
   const navigate = useNavigate();
 
@@ -76,17 +78,9 @@ const ProductDesc = () => {
       .get(urls.product.get.replace("{id}", id))
       .then((response) => {
         console.log(response);
-        setProduct(response.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-
-    apiClient
-      .get(urls.product.get)
-      .then((response) => {
-        console.log(response);
-        setcategoryProducts(response.data);
+        setProduct(response.data[0]);
+        setCategoryName(response.data[1]);
+        setcategoryProducts(response.data[2]);
       })
       .catch((error) => {
         console.log(error);
@@ -247,39 +241,39 @@ const ProductDesc = () => {
           padding: "24px",
         }}
       >
-        {categoryProducts?.map((category) => (
-          <React.Fragment key={category.number}>
-            <Grid item lg={12}>
-              <Typography
-                variant="h5"
-                sx={{
-                  backgroundColor: "#1976d2",
-                  color: "white",
-                  padding: "10px",
-                }}
-              >
-                {category.categoryName}
-              </Typography>
-            </Grid>
-            {category.products.map((item) => (
-              <Grid
-                item
-                key={item.number}
-                onClick={() => {
-                  setId(item.productId);
-                }}
-              >
-                <ProductCard
-                  productId={item.productId}
-                  category={item.category}
-                  itemName={item.name}
-                  price={item.price}
-                  image={item.image}
-                />
-              </Grid>
-            ))}
-          </React.Fragment>
+        <Grid item lg={12}>
+          <Typography
+            variant="h5"
+            sx={{
+              backgroundColor: "#1976d2",
+              color: "white",
+              padding: "10px",
+            }}
+          >
+            {categoryName}
+          </Typography>
+        </Grid>
+        {/* {categoryProducts?.map((category) => (
+          <React.Fragment key={category.number}> */}
+        {categoryProducts.map((item) => (
+          <Grid
+            item
+            key={item.number}
+            onClick={() => {
+              setId(item.productId);
+            }}
+          >
+            <ProductCard
+              productId={item.productId}
+              category={item.category}
+              itemName={item.name}
+              price={item.price}
+              image={item.image}
+            />
+          </Grid>
         ))}
+        {/* </React.Fragment>
+        ))} */}
       </Grid>
     </Grid>
   );

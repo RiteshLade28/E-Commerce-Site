@@ -3,14 +3,146 @@ import sqlite3
 from flask import Flask, abort, render_template, make_response, jsonify, request
 from flask_cors import CORS
 import traceback
+import jwt
+import bcrypt
+from functools import wraps
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)
 
 
 route = "/api"
+authRoute = "/api/auth"
+app.config['SECRET_KEY'] = 'secret'
 
-@app.route(route + '/products/')
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            token = auth_header.split(' ')[1]  # Extract the token from the header
+            print(token)
+
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+
+        try:
+            # Verify and decode the token using your secret key
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            print(data)
+            # Store the decoded data in the request context for further use
+            # request.current_user = data['user']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+@app.route(authRoute + "/signup", methods=["OPTIONS"])
+def handleSignupOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route('/api/auth/signup', methods=['POST'])
+def signup():
+    data = request.json
+    firstname = data.get('firstname')
+    lastname = data.get('lastname')
+    email = data.get('email')
+    password = data.get('password')
+    address = data.get('address')
+    city = data.get('city')
+    pincode = data.get('pincode')
+    state = data.get('state')
+    country = data.get('country')
+
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT email FROM users WHERE email = ?", (email,))
+        if cur.fetchone() is not None:
+            return jsonify({"message": "Email already exists"}), 400
+
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+        cur.execute("INSERT INTO users (firstname, lastname, email, password, salt, address, city, pincode, state, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (firstname, lastname, email, hashed_password, salt, address, city, pincode, state, country))
+        conn.commit()
+        return jsonify({"message": "Signup successful"}), 201
+
+
+@app.route(authRoute + "/login/", methods=["OPTIONS"])
+def handleLoginOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+@app.route('/api/auth/login/', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user = cur.fetchone()
+        if user is None:
+            return jsonify({"message": "Invalid credentials"}), 400
+        else:
+            db_password = user[2]  # Assuming password hash is stored in the 4th column
+            salt = user[3]  # Assuming salt is stored in the 6th column
+
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+            if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
+                expiry = datetime.utcnow() + timedelta(days=1)
+                payload = {
+                    'email': email,
+                    'exp': expiry
+                }
+                token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm="HS256")
+                # print(token)
+                return jsonify({"token": token}), 200
+            else:
+                return jsonify({"message": "Invalid credentials"}), 400
+
+
+@app.route("/api/chechauth", methods=["OPTIONS"])
+def handleCheckAuthOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+@app.route('/api/checkauth', methods=['GET'])
+@token_required
+def checkAuth():
+    return jsonify({"message": "You are authorized"}), 200
+
+
+@app.route(route + '/products/',  methods=["OPTIONS"])
+# @token_required
+def handleProductsAuthOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route(route + '/products/', methods=['GET'])
+@token_required
 def getProducts():
     productId = request.args.get('id')
     if productId:
@@ -20,7 +152,7 @@ def getProducts():
             itemData = cur.fetchall()
 
         if itemData:
-            productId, name, price, ratings, image, description, categoryId, categoryName,  = itemData[0]
+            productId, name, price, ratings, image, description, categoryId, categoryName = itemData[0]
             product = {
                 'productId': productId,
                 'categoryId': categoryId,
@@ -30,9 +162,27 @@ def getProducts():
                 'image': image,
                 'description': description
             }
-            return jsonify(product)
-        # else:
-        #     return jsonify({})  # Return an empty response if the product is not found
+            
+            cur.execute('SELECT productId, name, price, image, categoryId FROM products where categoryId = ?', (categoryId,))
+            categoryData = cur.fetchall()
+            relatedProducts = []
+            relatedProductsCnt = 0
+            for item in categoryData:
+                relatedProductsCnt +=1
+                productId, name, price, image, categoryId = item
+                relatedProducts.append({
+                    'productId': productId,
+                    'categoryId': categoryId,
+                    'name': name,
+                    'price': price,
+                    'image': image
+                })
+
+            # print(categoryData)
+
+            
+
+            return jsonify([product, categoryName, relatedProducts])
 
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
@@ -62,8 +212,8 @@ def getProducts():
 
     return jsonify(formattedData)
 
-
 @app.route(route + '/products/', methods=["POST"])
+@token_required
 def addProduct():
     new_quantity = request.headers.get('quantity')
     with sqlite3.connect('ecart.db') as conn:
@@ -86,6 +236,7 @@ def addProduct():
     return make_response(msg, status_code)
 
 @app.route(route + '/cartItems/')
+@token_required
 def cartItems():
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
@@ -129,6 +280,7 @@ def handleCartItemOptions():
     return response
 
 @app.route(route + "/cartItem", methods=["POST"])
+@token_required
 def addToCart():
     productId = request.args.get('id')
     print(productId)
@@ -162,6 +314,7 @@ def addToCart():
     return make_response(msg, status_code)
 
 @app.route(route + "/cartItem", methods=["DELETE"])    
+@token_required
 def removeFromCart():
     productId = request.args.get('id')
     print(productId)
@@ -180,6 +333,7 @@ def removeFromCart():
     return make_response(msg, status_code)
 
 @app.route(route + "/cartItem", methods=["PATCH"])
+@token_required
 def updateQuantity():
     productId = request.args.get('id')
     new_quantity = request.headers.get('quantity')
