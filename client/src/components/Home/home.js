@@ -13,13 +13,8 @@ export default function Home() {
     const token = Cookies.get("token");
     console.log(token);
 
-    const payload = JSON.parse(atob(token.split(".")[1]));
     apiClient
-      .get(urls.product.get, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      .get(urls.product.get)
       .then((response) => {
         console.log(response);
         setcategoryProducts(response.data);

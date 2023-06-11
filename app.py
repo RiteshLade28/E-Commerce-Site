@@ -26,7 +26,6 @@ def token_required(f):
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             token = auth_header.split(' ')[1]  # Extract the token from the header
-            print(token)
 
         if not token:
             return jsonify({'message': 'Token is missing'}), 401
@@ -34,15 +33,15 @@ def token_required(f):
         try:
             # Verify and decode the token using your secret key
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            print(data)
-            # Store the decoded data in the request context for further use
-            # request.current_user = data['user']
+            current_user = data  # Set current_user to the decoded data
+
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'message': 'Invalid token'}), 401
 
-        return f(*args, **kwargs)
+        # Pass current_user as an argument to the decorated function
+        return f(*args, current_user=current_user, **kwargs)
 
     return decorated
 
@@ -88,6 +87,7 @@ def handleLoginOptions():
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
+
 @app.route('/api/auth/login/', methods=['POST'])
 def login():
     data = request.json
@@ -110,11 +110,13 @@ def login():
                 expiry = datetime.utcnow() + timedelta(days=1)
                 payload = {
                     'email': email,
-                    'exp': expiry
+                    'exp': expiry,
+                    "userId": user[0], 
+                    "email": email
                 }
                 token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm="HS256")
                 # print(token)
-                return jsonify({"token": token}), 200
+                return jsonify({"token": token, "userId": user[0], "email": email, "firstName": user[4], "lastName": user[5]}), 200
             else:
                 return jsonify({"message": "Invalid credentials"}), 400
 
@@ -126,9 +128,10 @@ def handleCheckAuthOptions():
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
+
 @app.route('/api/checkauth', methods=['GET'])
 @token_required
-def checkAuth():
+def checkAuth(current_user):
     return jsonify({"message": "You are authorized"}), 200
 
 
@@ -142,7 +145,7 @@ def handleProductsAuthOptions():
 
 
 @app.route(route + '/products/', methods=['GET'])
-@token_required
+# @token_required
 def getProducts():
     productId = request.args.get('id')
     if productId:
@@ -212,9 +215,10 @@ def getProducts():
 
     return jsonify(formattedData)
 
+
 @app.route(route + '/products/', methods=["POST"])
 @token_required
-def addProduct():
+def addProduct(current_user):
     new_quantity = request.headers.get('quantity')
     with sqlite3.connect('ecart.db') as conn:
         product = request.get_json()
@@ -235,26 +239,28 @@ def addProduct():
     conn.close()
     return make_response(msg, status_code)
 
+
 @app.route(route + '/cartItems/')
 @token_required
-def cartItems():
+def cartItems(current_user):
+    userId = current_user['userId']
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity FROM products, kart, categories WHERE products.productId = kart.productId AND products.categoryId = categories.categoryId"
+            "SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity FROM users, products, kart, categories WHERE users.userId = ? AND users.userId = kart.userId AND products.productId = kart.productId AND products.categoryId = categories.categoryId",
+            (userId,),
         )
         products = cur.fetchall()
 
     totalPrice = 0
     totalItems = 0
-    for row in products:
-        quantity = row[5]
-        totalPrice += row[2] * quantity
-        totalItems += row[5]
-
     formattedData = []
+
     for item in products:
         productId, name, price, image, categoryName, quantity = item
+        totalPrice += price * quantity
+        totalItems += quantity
+
         formattedData.append({
             'productId': productId,
             'itemName': name,
@@ -269,8 +275,11 @@ def cartItems():
         'totalPrice': totalPrice,
         'totalItems': totalItems
     }
+
     print("items " + str(totalItems))
     return jsonify(response)
+
+
 
 @app.route(route + "/cartItem", methods=["OPTIONS"])
 def handleCartItemOptions():
@@ -279,27 +288,30 @@ def handleCartItemOptions():
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
+
 @app.route(route + "/cartItem", methods=["POST"])
 @token_required
-def addToCart():
+def addToCart(current_user):
     productId = request.args.get('id')
-    print(productId)
+    userId = current_user['userId']  # Extract userId from the decoded token
+
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
+
         try:
-            # Check if the product already exists in the cart
-            cur.execute("SELECT productId, quantity FROM kart WHERE productId = ?", (productId,))
+            # Check if the product already exists in the cart for the current user
+            cur.execute("SELECT productId, quantity FROM kart WHERE productId = ? AND userId = ?", (productId, userId))
             existing_product = cur.fetchone()
 
             if existing_product:
                 # If the product already exists, update the quantity by 1
                 new_quantity = existing_product[1] + 1
-                cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId))
+                cur.execute("UPDATE kart SET quantity = ? WHERE productId = ? AND userId = ?", (new_quantity, productId, userId))
 
                 msg = "Quantity updated successfully"
             else:
-                # If the product doesn't exist, add a new entry with quantity 1
-                cur.execute("INSERT INTO kart (productId, quantity) VALUES (?, ?)", (productId, 1))
+                # If the product doesn't exist, add a new entry with quantity 1 for the current user
+                cur.execute("INSERT INTO kart (userId, productId, quantity) VALUES (?, ?, ?)", (userId, productId, 1))
                 msg = "Added successfully"
 
             conn.commit()
@@ -313,9 +325,10 @@ def addToCart():
     conn.close()
     return make_response(msg, status_code)
 
+
 @app.route(route + "/cartItem", methods=["DELETE"])    
 @token_required
-def removeFromCart():
+def removeFromCart(current_user):
     productId = request.args.get('id')
     print(productId)
     with sqlite3.connect('ecart.db') as conn:
@@ -334,7 +347,7 @@ def removeFromCart():
 
 @app.route(route + "/cartItem", methods=["PATCH"])
 @token_required
-def updateQuantity():
+def updateQuantity(current_user):
     productId = request.args.get('id')
     new_quantity = request.headers.get('quantity')
 

@@ -55,6 +55,10 @@ export default function SignInSide() {
           token: login.data.token,
         };
         await Cookies.set("token", login.data.token);
+        await Cookies.set("email", login.data.email);
+        await Cookies.set("userId", login.data.userId);
+        await Cookies.set("firstname", login.data.firstName);
+        await Cookies.set("lastname", login.data.lastName);
         setCurrentUser(newState);
         navigate("/");
       }

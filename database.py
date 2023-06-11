@@ -73,19 +73,19 @@ conn = sqlite3.connect("ecart.db")
 # 		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
 # 		)''')
 
-conn.execute('''CREATE TABLE users 
-		(userId INTEGER PRIMARY KEY, 
-		email TEXT,
-		password TEXT,
-        salt INTEGER,
-		firstName TEXT,
-		lastName TEXT,
-		address TEXT,
-		city TEXT,
-		pincode TEXT,
-		state TEXT,
-		country TEXT
-		)''' )
+# conn.execute('''CREATE TABLE users 
+# 		(userId INTEGER PRIMARY KEY, 
+# 		email TEXT,
+# 		password TEXT,
+#       salt INTEGER,
+# 		firstName TEXT,
+# 		lastName TEXT,
+# 		address TEXT,
+# 		city TEXT,
+# 		pincode TEXT,
+# 		state TEXT,
+# 		country TEXT
+# 		)''' )
 
 # conn.execute('''CREATE TABLE categories
 # 		(categoryId INTEGER PRIMARY KEY,
@@ -93,11 +93,13 @@ conn.execute('''CREATE TABLE users
 # 		)''')
 
 
-# conn.execute('''CREATE TABLE kart
-# 		(productId INTEGER,
-#         quantity INTEGER,
-# 		FOREIGN KEY(productId) REFERENCES products(productId)
-# 		)''')
+conn.execute('''CREATE TABLE kart
+		(userId INTEGER NOT NULL,
+        quantity INTEGER,
+		productId INTEGER,
+		FOREIGN KEY(userId) REFERENCES users(userId),
+		FOREIGN KEY(productId) REFERENCES products(productId)
+		)''')
 
 # for product in allProducts:
 # 	cur = conn.cursor()

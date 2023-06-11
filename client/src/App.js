@@ -10,6 +10,7 @@ import SignUp from "./components/Auth/Signup";
 import Login from "./components/Auth/Login";
 import Store from "./components/Auth/Store";
 import Layout from "./components/Layout";
+import BuyNow from "./components/BuyNow/BuyNow";
 
 function App() {
   const location = useLocation();
@@ -23,9 +24,10 @@ function App() {
       {shouldShowNavBarAndFooter && <NavBar />}
 
       <Routes>
-        <Route element={<Layout component={Home } />} path="/" />
+        <Route element={<Home />} path="/" />
         <Route element={<Layout component={CartPage} />} path="/cart" />
-        <Route element={<Layout component={ProductDesc} />} path="/product/:productId"/>
+        <Route element={<Layout component={BuyNow} />} path="/buyNow/:productId" />
+        <Route element={<ProductDesc />} path="/product/:productId"/>
         <Route element={<SignUp />} path="/signup" />
         <Route element={<Login />} path="/login" />
       </Routes>

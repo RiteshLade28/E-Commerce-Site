@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
@@ -9,9 +9,45 @@ import Badge from "@mui/material/Badge";
 import MenuIcon from "@mui/icons-material/Menu";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import axios from "axios";
+import LogoutIcon from "@mui/icons-material/Logout";
+import Cookies from "js-cookie";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import Tooltip from "@mui/material/Tooltip";
+import MenuItem from "@mui/material/MenuItem";
+import Menu from "@mui/material/Menu";
 
 export default function PrimarySearchAppBar() {
   let navigate = new useNavigate();
+  const [anchorElNav, setAnchorElNav] = React.useState(null);
+  const [anchorElUser, setAnchorElUser] = React.useState(null);
+  const settings = [
+    { name: "Profile", link: "/profile" },
+    { name: "Account", link: "/account" },
+    { name: "Logout", link: "/logout" },
+  ];
+
+  const handleOpenNavMenu = (event) => {
+    setAnchorElNav(event.currentTarget);
+  };
+  const handleOpenUserMenu = (event) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseNavMenu = (setting) => {
+    setAnchorElNav(null);
+  };
+
+  const handleCloseUserMenu = (setting) => {
+    if (setting.name === "Logout") {
+      Cookies.remove("token"); // Delete the 'token' cookie
+      Cookies.remove("email"); // Delete the 'email' cookie
+      Cookies.remove("userId"); // Delete the 'userId' cookie
+      Cookies.remove("firstname"); // Delete the 'firstname' cookie
+      Cookies.remove("lastname"); // Delete the 'lastname' cookie
+      navigate("/"); // Navigate to the login page
+    }
+    setAnchorElUser(null);
+  };
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -34,7 +70,12 @@ export default function PrimarySearchAppBar() {
           >
             MERNSTORE
           </Typography>
-          {/* <Box sx={{ flexGrow: 1 }}/> */}
+          <Typography variant="body1" component="div" sx={{ ml: 2 }}>
+            Hello,{" "}
+            {Cookies.get("firstname") ? Cookies.get("firstname") : "User"}{" "}
+            {Cookies.get("lastname")}
+          </Typography>
+
           <IconButton
             size="large"
             aria-label="show 17 new notifications"
@@ -47,6 +88,46 @@ export default function PrimarySearchAppBar() {
               <ShoppingCartIcon />
             </Badge>
           </IconButton>
+          <Box sx={{ flexGrow: 0 }}>
+            <Tooltip title="Open settings">
+              <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleOpenUserMenu}
+                sx={{ p: 0 }}
+                color="inherit"
+              >
+                <AccountCircle />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              sx={{ mt: "45px" }}
+              id="menu-appbar"
+              anchorEl={anchorElUser}
+              anchorOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={Boolean(anchorElUser)}
+              onClose={handleCloseUserMenu}
+            >
+              {settings.map((setting) => (
+                <MenuItem
+                  key={setting.name}
+                  onClick={() => handleCloseUserMenu(setting)}
+                >
+                  <Typography textAlign="center">{setting.name}</Typography>
+                </MenuItem>
+              ))}
+            </Menu>
+          </Box>
         </Toolbar>
       </AppBar>
     </Box>

@@ -22,10 +22,12 @@ export default function ShoppingCart() {
 
   const updateData = () => {
     const token = Cookies.get("token");
+    const userId = Cookies.get("userId");
     apiClient
       .get(urls.cart.get, {
         headers: {
           Authorization: `Bearer ${token}`,
+          userId: userId,
         },
       })
       .then((response) => {

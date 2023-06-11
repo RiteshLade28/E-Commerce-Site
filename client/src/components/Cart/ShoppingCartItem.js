@@ -16,6 +16,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import Cookies from "js-cookie";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -32,7 +33,7 @@ const useStyles = makeStyles((theme) => ({
   cover: {
     width: 200,
     height: 200, // Add this line
-    backgroundSize: "contain"
+    backgroundSize: "contain",
   },
 }));
 
@@ -45,11 +46,18 @@ export default function ShoppingCartItem({
   image,
   updateData,
 }) {
+  const token = Cookies.get("token");
+  const userId = Cookies.get("userId");
   const classes = useStyles();
   const [itemQuantity, setItemQuantity] = useState(quantity);
   const removeFromCart = async (id) => {
     await apiClient
-      .delete(urls.cart.delete.replace("{id}", id)) // localhost:5000/api/cart
+      .delete(urls.cart.delete.replace("{id}", id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          userId: userId,
+        },
+      }) // localhost:5000/api/cart
       .then((response) => {
         if (response.status === 200) {
           console.log(response);
@@ -65,16 +73,20 @@ export default function ShoppingCartItem({
   };
 
   const updateQuantity = (productId, quantity) => {
+    const token = Cookies.get("token");
+    const userId = Cookies.get("userId");
     return new Promise((resolve, reject) => {
       apiClient
         .patch(urls.cart.update.replace("{id}", productId), null, {
           headers: {
+            Authorization: `Bearer ${token}`,
+            userId: userId,
             quantity: quantity,
           },
         })
         .then((response) => {
           console.log(response.data);
-          resolve(response.data);  // Resolve the promise with the response data
+          resolve(response.data); // Resolve the promise with the response data
         })
         .catch((error) => {
           console.log(error);

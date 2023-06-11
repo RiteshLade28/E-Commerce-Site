@@ -15,12 +15,13 @@ import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import { makeStyles } from "@mui/styles";
-import { Button } from "@material-ui/core";
+import Button from "@mui/material/Button";
 import StarIcon from "@mui/icons-material/Star";
 import StarHalfIcon from "@mui/icons-material/StarHalf";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ProductCard from "./ProductCard";
 import { ToastContainer, toast } from "react-toastify";
+import Cookies from "js-cookie";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -52,13 +53,23 @@ const ProductDesc = () => {
   const [product, setProduct] = useState([]);
   const [categoryName, setCategoryName] = useState("");
   const [categoryProducts, setcategoryProducts] = useState([]);
-
+  const token = Cookies.get("token");
+  const userId = Cookies.get("userId");
   const classes = useStyles();
   const navigate = useNavigate();
 
-  function addToCart(id) {
+  const buyNow = (id) => {
+    console.log(token, userId);
+    navigate("/buyNow/" + id);
+  };
+  const addToCart = (id) => {
+    console.log(token, userId);
     apiClient
-      .post(urls.cart.create.replace("{id}", id))
+      .post(urls.cart.create.replace("{id}", id), null, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((response) => {
         console.log(response);
         if (response.status === 200) {
@@ -71,11 +82,16 @@ const ProductDesc = () => {
       .catch((error) => {
         console.log(error);
       });
-  }
+  };
 
   useEffect(() => {
     apiClient
-      .get(urls.product.get.replace("{id}", id))
+      .get(urls.product.get.replace("{id}", id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          userId: userId,
+        },
+      })
       .then((response) => {
         console.log(response);
         setProduct(response.data[0]);
@@ -135,15 +151,24 @@ const ProductDesc = () => {
               }}
             />
           </Grid>
-          <Grid item>
+          <Grid item lg={12}>
             <Button
               variant="contained"
               color="primary"
               size="large"
               color="secondary"
-              style={{ width: 180, marginLeft: "78px", marginRight: "50px" }}
+              style={{
+                width: 180,
+                marginLeft: "78px",
+                marginRight: "50px",
+                backgroundColor: "#f0c14b",
+              }}
               onClick={() => {
-                addToCart(id);
+                if (token) {
+                  addToCart(productId);
+                } else {
+                  toast.info("Please log in to add to cart");
+                }
               }}
             >
               Add To Cart
@@ -153,12 +178,24 @@ const ProductDesc = () => {
               color="primary"
               size="large"
               color="secondary"
-              style={{ width: 180, marginLeft: "30px" }}
+              style={{
+                width: 180,
+                marginLeft: "30px",
+                backgroundColor: "#f0c14b",
+              }}
+              onClick={() => {
+                if (token) {
+                  buyNow(productId);
+                } else {
+                  toast.info("Please log in to buy");
+                }
+              }}
             >
               Buy Now
             </Button>
           </Grid>
         </Grid>
+
         <Grid item container lg={2} direction="column" spacing={2}>
           <Grid item>
             <CardMedia
@@ -253,8 +290,6 @@ const ProductDesc = () => {
             {categoryName}
           </Typography>
         </Grid>
-        {/* {categoryProducts?.map((category) => (
-          <React.Fragment key={category.number}> */}
         {categoryProducts.map((item) => (
           <Grid
             item
@@ -272,8 +307,6 @@ const ProductDesc = () => {
             />
           </Grid>
         ))}
-        {/* </React.Fragment>
-        ))} */}
       </Grid>
     </Grid>
   );

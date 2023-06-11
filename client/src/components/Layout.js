@@ -37,7 +37,7 @@ export default function Layout({ component: Component }) {
   }
 
   return (
-    <Box >
+    <Box>
       {authenticated ? <Component /> : <Navigate to="/login" replace={true} />}
       <ToastContainer />
     </Box>

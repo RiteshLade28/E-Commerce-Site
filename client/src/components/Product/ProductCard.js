@@ -10,6 +10,8 @@ import urls from "../../apis/urls";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Link } from "react-router-dom";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
 
 export default function MediaCard({
   productId,
@@ -18,9 +20,22 @@ export default function MediaCard({
   price,
   image,
 }) {
-  function addToCart (id) {
+  const token = Cookies.get("token");
+  const userId = Cookies.get("userId");
+  const navigate = useNavigate();
+
+  const buyNow = (id) => {
+    console.log(token, userId);
+    navigate("/buyNow/" + id);
+  };
+  const addToCart = (id) => {
+    console.log(token, userId);
     apiClient
-      .post(urls.cart.create.replace("{id}", id))
+      .post(urls.cart.create.replace("{id}", id), null, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((response) => {
         console.log(response);
         if (response.status === 200) {
@@ -72,10 +87,25 @@ export default function MediaCard({
           </Typography>
         </CardContent>
         <CardActions sx={{ justifyContent: "space-between" }}>
-          <Button size="small">Buy Now</Button>
+          <Button
+            size="small"
+            onClick={() => {
+              if (token) {
+                buyNow(productId);
+              } else {
+                toast.info("Please log in to buy");
+              }
+            }}
+          >
+            Buy Now
+          </Button>
           <Button
             onClick={() => {
-              addToCart(productId);
+              if (token) {
+                addToCart(productId);
+              } else {
+                toast.info("Please log in to add to cart");
+              }
             }}
             size="small"
           >
