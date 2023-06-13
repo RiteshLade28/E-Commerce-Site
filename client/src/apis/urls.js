@@ -18,6 +18,12 @@ const urls = {
   user: {
     get: "/auth/users",
   },
+  order: {
+    get: "/orders/?id={id}",
+    create: "/orders/?id={id}",
+    update: "/orders/?id={id}",
+    delete: "/orders/?id={id}",
+  },
 };
 
 export default urls;

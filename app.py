@@ -280,7 +280,6 @@ def cartItems(current_user):
     return jsonify(response)
 
 
-
 @app.route(route + "/cartItem", methods=["OPTIONS"])
 def handleCartItemOptions():
     response = jsonify({})
@@ -375,6 +374,60 @@ def updateQuantity(current_user):
 
     conn.close()
     return make_response(jsonify(product=product, message=msg), status_code)
+
+
+@app.route(route + '/orders/',  methods=["OPTIONS"])
+# @token_required
+def handleOrdersAuthOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route(route + "/orders/", methods=["POST"])
+@token_required
+def placeOrder(current_user):
+    data = request.json
+    orderPayment = data["orderPayment"]
+    orderAddress = data["orderAddress"]
+    productId = request.args.get('id')
+    userId = current_user['userId']  # Extract userId from the decoded token
+
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            # Fetch the product price
+            cur.execute("SELECT price FROM products WHERE productId = ?", (productId,))
+            product_price = cur.fetchone()[0]
+
+            # Insert into payments table
+            cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
+                        (userId, orderPayment['cardName'], orderPayment['cardNumber'], orderPayment['expDate'], orderPayment['cvv'], datetime.now()))
+
+            paymentId = cur.lastrowid  # Get the generated payment ID
+
+            # Insert into orderDetails table
+            cur.execute("INSERT INTO orderDetails (productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                        (productId, 1, product_price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
+
+            orderDetailsId = cur.lastrowid  # Get the generated orderDetails ID
+
+            # Insert into orders table
+            cur.execute("INSERT INTO orders (userId, orderDetailsId, paymentId) VALUES ( ?, ?, ?)", 
+                        (userId, orderDetailsId, paymentId))
+            orderId = cur.lastrowid
+
+            msg = "Order placed successfully"
+            conn.commit()
+            status_code = 200
+        except Exception as e:
+            conn.rollback()
+            msg = "Error occurred: " + str(e)
+            status_code = 500
+
+    return jsonify({"orderId": orderId}), status_code
+
 
     
 

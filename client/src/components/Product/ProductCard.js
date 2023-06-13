@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { Link } from "react-router-dom";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
+import Store, {IdContext } from "../BuyNow/Store.js";
 
 export default function MediaCard({
   productId,
@@ -23,9 +24,11 @@ export default function MediaCard({
   const token = Cookies.get("token");
   const userId = Cookies.get("userId");
   const navigate = useNavigate();
+  const { id, setId } = React.useContext(IdContext);
 
   const buyNow = (id) => {
     console.log(token, userId);
+    setId(id);
     navigate("/buyNow/" + id);
   };
   const addToCart = (id) => {

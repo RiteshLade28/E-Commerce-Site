@@ -22,7 +22,7 @@ import wallpaper from "../../images/wallpaper.jpg";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
 import Cookies from "js-cookie";
-import Store, { CurrentUserContext } from "./Store.js";
+// import Store, { CurrentUserContext } from "./Store.js";
 import bcrypt from "bcryptjs";
 
 const defaultTheme = createTheme();
@@ -33,7 +33,7 @@ export default function SignInSide() {
   const [password, setPassword] = useState("");
   const handleShowClick = () => setShowPassword(!showPassword);
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser } = useContext(CurrentUserContext);
+  // const { currentUser, setCurrentUser } = useContext(CurrentUserContext);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -48,18 +48,18 @@ export default function SignInSide() {
         password: password,
       });
       if (login.status === 200) {
-        const newState = {
-          firstname: login.data.firstname,
-          lastname: login.data.lastname,
-          email: login.data.email,
-          token: login.data.token,
-        };
+        // const newState = {
+        //   firstname: login.data.firstname,
+        //   lastname: login.data.lastname,
+        //   email: login.data.email,
+        //   token: login.data.token,
+        // };
         await Cookies.set("token", login.data.token);
         await Cookies.set("email", login.data.email);
         await Cookies.set("userId", login.data.userId);
         await Cookies.set("firstname", login.data.firstName);
         await Cookies.set("lastname", login.data.lastName);
-        setCurrentUser(newState);
+        // setCurrentUser(newState);
         navigate("/");
       }
     });

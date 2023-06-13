@@ -15,6 +15,7 @@ import AccountCircle from "@mui/icons-material/AccountCircle";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import Menu from "@mui/material/Menu";
+import { Button } from "@mui/material";
 
 export default function PrimarySearchAppBar() {
   let navigate = new useNavigate();
@@ -70,38 +71,54 @@ export default function PrimarySearchAppBar() {
           >
             MERNSTORE
           </Typography>
-          <Typography variant="body1" component="div" sx={{ ml: 2 }}>
+          <Typography
+            variant="body1"
+            component="div"
+            sx={{ ml: 2, paddingRight: 2 }}
+          >
             Hello,{" "}
             {Cookies.get("firstname") ? Cookies.get("firstname") : "User"}{" "}
             {Cookies.get("lastname")}
           </Typography>
 
-          <IconButton
-            size="large"
-            aria-label="show 17 new notifications"
-            color="inherit"
-            onClick={() => {
-              navigate("/cart");
-            }}
-          >
-            <Badge color="error">
-              <ShoppingCartIcon />
-            </Badge>
-          </IconButton>
           <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton
-                size="large"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleOpenUserMenu}
-                sx={{ p: 0 }}
-                color="inherit"
+            {Cookies.get("firstname") ? (
+              <Tooltip title="Open settings">
+                <IconButton
+                  size="large"
+                  aria-label="account of current user"
+                  aria-controls="menu-appbar"
+                  aria-haspopup="true"
+                  onClick={handleOpenUserMenu}
+                  sx={{ p: 0 }}
+                  color="inherit"
+                >
+                  <AccountCircle />
+                </IconButton>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="primary"
+                padding="10px"
+                onClick={() => {
+                  navigate("/login");
+                }}
               >
-                <AccountCircle />
-              </IconButton>
-            </Tooltip>
+                Login
+              </Button>
+            )}
+            <IconButton
+              size="large"
+              aria-label="show 17 new notifications"
+              color="inherit"
+              onClick={() => {
+                navigate("/cart");
+              }}
+            >
+              <Badge color="error">
+                <ShoppingCartIcon />
+              </Badge>
+            </IconButton>
             <Menu
               sx={{ mt: "45px" }}
               id="menu-appbar"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
@@ -7,15 +7,49 @@ import Checkbox from "@mui/material/Checkbox";
 import Cookies from "js-cookie";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
+import Store, { OrderAddressContext, NextStepContext } from "./Store.js";
 
-export default function AddressForm() {
+export default function AddressForm({ handleNextStep }) {
   const token = Cookies.get("token");
   const userId = Cookies.get("userId");
-  // const firstName = Cookies.get("firstName");
-  // const lastName = Cookies.get("lastName");
+  const { orderAddress, setOrderAddress } = useContext(OrderAddressContext);
+  const { nextStep, setNextStep } = useContext(NextStepContext);
 
-  const [firstName, setFirstName] = useState(Cookies.get("firstname"));
-  const [lastName, setLastName] = useState(Cookies.get("lastname"));
+  const [firstName, setFirstName] = useState(orderAddress.firstName);
+  const [lastName, setLastName] = useState(orderAddress.lastName);
+  const [address, setAddress] = useState(orderAddress.address);
+  const [landmark, setLandmark] = useState(orderAddress.landmark);
+  const [city, setCity] = useState(orderAddress.city);
+  const [state, setState] = useState(orderAddress.state);
+  const [pinCode, setPinCode] = useState(orderAddress.pinCode);
+  const [country, setCountry] = useState(orderAddress.country);
+
+  useEffect(() => {
+    setOrderAddress({
+      firstName,
+      lastName,
+      address,
+      landmark,
+      city,
+      state,
+      pinCode,
+      country,
+    });
+
+    console.log(orderAddress);
+
+    setNextStep(false);
+  }, [
+    nextStep,
+    firstName,
+    lastName,
+    address,
+    landmark,
+    city,
+    state,
+    pinCode,
+    country,
+  ]);
 
   return (
     <React.Fragment>
@@ -33,7 +67,9 @@ export default function AddressForm() {
             fullWidth
             autoComplete="given-name"
             variant="standard"
-            onChange={(e) => setFirstName(e.target.value)} // Update the value of firstName when it changes
+            onChange={(e) => {
+              setFirstName(e.target.value);
+            }} // Update the value of firstName when it changes
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -46,28 +82,36 @@ export default function AddressForm() {
             fullWidth
             autoComplete="family-name"
             variant="standard"
-            onChange={(e) => setFirstName(e.target.value)} 
+            onChange={(e) => setLastName(e.target.value)}
           />
         </Grid>
         <Grid item xs={12}>
           <TextField
             required
-            id="address1"
-            name="address1"
-            label="Address line 1"
+            id="address"
+            name="address"
+            label="Address"
             fullWidth
-            autoComplete="shipping address-line1"
+            autoComplete="shipping address"
             variant="standard"
+            value={address}
+            onChange={(e) => {
+              setAddress(e.target.value);
+            }}
           />
         </Grid>
         <Grid item xs={12}>
           <TextField
-            id="address2"
-            name="address2"
-            label="Address line 2"
+            id="landmark"
+            name="landmark"
+            label="Landmark"
             fullWidth
-            autoComplete="shipping address-line2"
+            autoComplete="landmark"
             variant="standard"
+            value={landmark}
+            onChange={(e) => {
+              setLandmark(e.target.value);
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -79,6 +123,8 @@ export default function AddressForm() {
             fullWidth
             autoComplete="shipping address-level2"
             variant="standard"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -88,17 +134,21 @@ export default function AddressForm() {
             label="State/Province/Region"
             fullWidth
             variant="standard"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
           <TextField
             required
-            id="zip"
-            name="zip"
-            label="Zip / Postal code"
+            id="pinCode"
+            name="pinCode"
+            label="Zip / Pin code"
             fullWidth
-            autoComplete="shipping postal-code"
+            autoComplete="shipping pincode"
             variant="standard"
+            value={pinCode}
+            onChange={(e) => setPinCode(e.target.value)}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -110,16 +160,25 @@ export default function AddressForm() {
             fullWidth
             autoComplete="shipping country"
             variant="standard"
+            value={country}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setCountry(e.target.value);
+            }}
+            onBlur={(e) => {
+              console.log(e.target.value);
+              setCountry(e.target.value);
+            }}
           />
         </Grid>
-        <Grid item xs={12}>
+        {/* <Grid item xs={12}>
           <FormControlLabel
             control={
               <Checkbox color="secondary" name="saveAddress" value="yes" />
             }
             label="Use this address for payment details"
           />
-        </Grid>
+        </Grid> */}
       </Grid>
     </React.Fragment>
   );

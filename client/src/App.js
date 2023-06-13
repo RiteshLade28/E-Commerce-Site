@@ -8,7 +8,7 @@ import CartPage from "./components/Cart/Cart";
 import ProductDesc from "./components/Product/ProductDesc";
 import SignUp from "./components/Auth/Signup";
 import Login from "./components/Auth/Login";
-import Store from "./components/Auth/Store";
+import Store from "./components/BuyNow/Store";
 import Layout from "./components/Layout";
 import BuyNow from "./components/BuyNow/BuyNow";
 
