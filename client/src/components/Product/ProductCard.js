@@ -23,12 +23,14 @@ export default function MediaCard({
 }) {
   const token = Cookies.get("token");
   const userId = Cookies.get("userId");
+   
   const navigate = useNavigate();
   const { id, setId } = React.useContext(IdContext);
 
   const buyNow = (id) => {
     console.log(token, userId);
     setId(id);
+    Cookies.set("buyNowId", id);
     navigate("/buyNow/" + id);
   };
   const addToCart = (id) => {

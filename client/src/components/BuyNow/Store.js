@@ -5,6 +5,7 @@ const NextStepContext = createContext(null);
 const OrderPaymentContext = createContext(null);
 const IdContext = createContext(null);
 const PlaceOrder = createContext(null);
+const BuyFromCartContext = createContext(null);
 
 const address = {
   firstName: "",
@@ -30,22 +31,34 @@ const Store = ({ children }) => {
   const [orderPayment, setOrderPayment] = useState(payment);
   const [id, setId] = useState(null);
   const [placeOrder, setPlaceOrder] = useState(false);
+  const [buyFromCart, setBuyFromCart] = useState(false);
 
   return (
-    <PlaceOrder.Provider value={{ placeOrder, setPlaceOrder }}>
-    <IdContext.Provider value={{ id, setId }}>
-      <OrderPaymentContext.Provider value={{ orderPayment, setOrderPayment }}>
-        <NextStepContext.Provider value={{ nextStep, setNextStep }}>
-          <OrderAddressContext.Provider
-            value={{ orderAddress, setOrderAddress }}
+    <BuyFromCartContext.Provider value={{ buyFromCart, setBuyFromCart }}>
+      <PlaceOrder.Provider value={{ placeOrder, setPlaceOrder }}>
+        <IdContext.Provider value={{ id, setId }}>
+          <OrderPaymentContext.Provider
+            value={{ orderPayment, setOrderPayment }}
           >
-            {children}
-          </OrderAddressContext.Provider>
-        </NextStepContext.Provider>
-      </OrderPaymentContext.Provider>
-    </IdContext.Provider>
-    </PlaceOrder.Provider>
+            <NextStepContext.Provider value={{ nextStep, setNextStep }}>
+              <OrderAddressContext.Provider
+                value={{ orderAddress, setOrderAddress }}
+              >
+                {children}
+              </OrderAddressContext.Provider>
+            </NextStepContext.Provider>
+          </OrderPaymentContext.Provider>
+        </IdContext.Provider>
+      </PlaceOrder.Provider>
+    </BuyFromCartContext.Provider>
   );
 };
 export default Store;
-export { OrderAddressContext, NextStepContext, OrderPaymentContext, IdContext, PlaceOrder };
+export {
+  OrderAddressContext,
+  NextStepContext,
+  OrderPaymentContext,
+  IdContext,
+  PlaceOrder,
+  BuyFromCartContext,
+};

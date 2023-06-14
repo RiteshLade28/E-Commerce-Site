@@ -4,7 +4,7 @@ API using Axios, and displays them in a responsive grid layout using Material-UI
 includes functionality to add the product to the cart and display a success or failure message using
 the react-toastify library. The component also allows the user to navigate to related products by
 clicking on them. */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
 import { useParams, useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ProductCard from "./ProductCard";
 import { ToastContainer, toast } from "react-toastify";
 import Cookies from "js-cookie";
+import Store, {IdContext} from "../BuyNow/Store";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -49,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
 
 const ProductDesc = () => {
   const { productId } = useParams();
-  const [id, setId] = useState(productId);
+  const { id, setId } = useContext(IdContext);
   const [product, setProduct] = useState([]);
   const [categoryName, setCategoryName] = useState("");
   const [categoryProducts, setcategoryProducts] = useState([]);
@@ -60,6 +61,7 @@ const ProductDesc = () => {
 
   const buyNow = (id) => {
     console.log(token, userId);
+    setId(id);
     navigate("/buyNow/" + id);
   };
   const addToCart = (id) => {

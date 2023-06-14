@@ -21,6 +21,7 @@ const urls = {
   order: {
     get: "/orders/?id={id}",
     create: "/orders/?id={id}",
+    createCart: "/orders/cart/",
     update: "/orders/?id={id}",
     delete: "/orders/?id={id}",
   },

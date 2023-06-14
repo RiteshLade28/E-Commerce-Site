@@ -159,6 +159,7 @@ def getProducts():
             product = {
                 'productId': productId,
                 'categoryId': categoryId,
+                'categoryName': categoryName,
                 'name': name,
                 'price': price,
                 'ratings': ratings,
@@ -263,7 +264,7 @@ def cartItems(current_user):
 
         formattedData.append({
             'productId': productId,
-            'itemName': name,
+            'name': name,
             'price': price,
             'image': image,
             'category': categoryName,
@@ -384,7 +385,6 @@ def handleOrdersAuthOptions():
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
-
 @app.route(route + "/orders/", methods=["POST"])
 @token_required
 def placeOrder(current_user):
@@ -394,8 +394,10 @@ def placeOrder(current_user):
     productId = request.args.get('id')
     userId = current_user['userId']  # Extract userId from the decoded token
 
+    orderId = None
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
+
         try:
             # Fetch the product price
             cur.execute("SELECT price FROM products WHERE productId = ?", (productId,))
@@ -407,17 +409,17 @@ def placeOrder(current_user):
 
             paymentId = cur.lastrowid  # Get the generated payment ID
 
-            # Insert into orderDetails table
-            cur.execute("INSERT INTO orderDetails (productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                        (productId, 1, product_price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
-
-            orderDetailsId = cur.lastrowid  # Get the generated orderDetails ID
-
-            # Insert into orders table
-            cur.execute("INSERT INTO orders (userId, orderDetailsId, paymentId) VALUES ( ?, ?, ?)", 
+             # Insert into orders table
+            cur.execute("INSERT INTO orders (userId, paymentId) VALUES ( ?, ?)", 
                         (userId, orderDetailsId, paymentId))
-            orderId = cur.lastrowid
 
+            orderId = cur.lastrowid  # Get the ID of the inserted order
+
+            # Insert into orderDetails table
+            cur.execute("INSERT INTO orderDetails (orderId, productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                        (orderId, productId, 1, product_price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
+
+           
             msg = "Order placed successfully"
             conn.commit()
             status_code = 200
@@ -428,7 +430,58 @@ def placeOrder(current_user):
 
     return jsonify({"orderId": orderId}), status_code
 
+@app.route(route + '/orders/cart/',  methods=["OPTIONS"])
+# @token_required
+def handleOrdersCartAuthOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
+@app.route(route + "/orders/cart/", methods=["POST"])
+@token_required
+def placeOrderFromCart(current_user):
+    # Retrieve cart data from the request
+    data = request.json
+    orderPayment = data["orderPayment"]
+    orderAddress = data["orderAddress"]
+    userId = current_user['userId'] 
+
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
+                        (userId, orderPayment['cardName'], orderPayment['cardNumber'], orderPayment['expDate'], orderPayment['cvv'], datetime.now()))
+            paymentId = cur.lastrowid
+            cur.execute("SELECT * FROM kart WHERE userId = ?", (userId,))
+            cartItems = cur.fetchall()
+
+            cur.execute("INSERT INTO orders (userId, paymentId) VALUES (?, ?)", (userId, paymentId))
+            orderId = cur.lastrowid  # Get the ID of the inserted order
+
+            for item in cartItems:
+                productId = item[0]
+                quantity = 1
+                price = item[2]
+                # ... Retrieve other necessary information for the order
+
+                cur.execute("INSERT INTO orderDetails (orderId ,productId, quantity, price, address, landmark, city, pincode, state, country, orderDate, orderId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ( orderId ,productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now(), 'NULL'))
+        
+            
+            conn.commit()
+            status_code = 200
+            msg = "Order placed successfully"
+
+
+
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    return jsonify({"orderId": orderId}), status_code
+    
     
 
 if __name__ == "__main__":

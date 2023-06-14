@@ -26,8 +26,12 @@ function App() {
       <Routes>
         <Route element={<Home />} path="/" />
         <Route element={<Layout component={CartPage} />} path="/cart" />
-        <Route element={<Layout component={BuyNow} />} path="/buyNow/:productId" />
-        <Route element={<ProductDesc />} path="/product/:productId"/>
+        <Route
+          element={<Layout component={BuyNow} />}
+          path="/buyNow/:productId"
+        />
+        <Route element={<Layout component={BuyNow} />} path="/buyNow/cart" />
+        <Route element={<ProductDesc />} path="/product/:productId" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<Login />} path="/login" />
       </Routes>

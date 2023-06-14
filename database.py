@@ -105,10 +105,8 @@ conn = sqlite3.connect("ecart.db")
 conn.execute('''CREATE TABLE orders
 		(orderId INTEGER PRIMARY KEY,
         userId INTEGER,
-        orderDetailsId INTEGER,
         paymentId INTEGER,
         FOREIGN KEY(userId) REFERENCES users(userId),
-        FOREIGN KEY(orderDetailsId) REFERENCES orderDetails(orderDetailsId)
         FOREIGN KEY(paymentId) REFERENCES payments(paymentId)
 		)''')
 

@@ -1,10 +1,12 @@
-import React from "react";
+import React, {useContext} from "react";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import { makeStyles } from "@mui/styles";
 import { Grid, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import Store, {BuyFromCartContext} from "../BuyNow/Store";
 
 const useStyles = makeStyles({
   root: {
@@ -25,8 +27,12 @@ const useStyles = makeStyles({
 });
 
 export default function MediaCard({ price, totalItems }) {
+  const navigate = useNavigate();
+  const { buyFromCart, setBuyFromCart } = useContext(BuyFromCartContext);
+
+
   const classes = useStyles();
-  const shippingPrice = totalItems ? 100: 0;
+  const shippingPrice = totalItems ? 100 : 0;
   return (
     <Card className={classes.root} elevation={15}>
       <Grid container>
@@ -71,7 +77,14 @@ export default function MediaCard({ price, totalItems }) {
         </Grid>
         <Grid item lg={12}>
           <CardActions className={classes.cardActions}>
-            <Button size="large" color="secondary">
+            <Button
+              size="large"
+              color="secondary"
+              onClick={() => {
+                setBuyFromCart(true);
+                navigate("/buyNow/cart");
+              }}
+            >
               BUY NOW ({totalItems})
             </Button>
           </CardActions>

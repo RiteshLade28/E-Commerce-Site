@@ -41,32 +41,48 @@ export default function Checkout() {
   const { orderAddress, setOrderAddress } = useContext(OrderAddressContext);
   const [orderId, setOrderId] = useState("");
 
-  // const handleNextStep = async () => {
-  //   console.log(id);
-  //   await setActiveStep(activeStep + 1);
-  //   await setNextStep(true);
-  // };
+  const { productId } = useParams();
 
   const handleNextStep = async () => {
+    console.log(productId);
     if (activeStep === steps.length - 1) {
       // Logic for sending the order request
       const token = Cookies.get("token");
       const userId = Cookies.get("userId");
+      const buyNowId = Cookies.get("buyNowId");
+  
       const requestBody = {
         orderPayment,
         orderAddress,
       };
-      apiClient
-        .post(urls.order.create.replace("{id}", id), requestBody, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            userId: userId,
-          },
-        })
+  
+      let response;
+      if (buyNowId) {
+        response = apiClient
+          .post(urls.order.create.replace("{id}", id), requestBody, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              userId: userId,
+            },
+          });
+      } else {
+        response = apiClient
+          .post(urls.order.createCart, requestBody, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              userId: userId,
+            },
+          });
+      }
+  
+      response
         .then((response) => {
           console.log(response.data);
           setOrderId(response.data);
           // Additional logic after successfully adding the order
+          if (response.status === 200) {
+            setActiveStep(activeStep + 1);
+          }
         })
         .catch((error) => {
           console.log(error);
@@ -75,9 +91,11 @@ export default function Checkout() {
     } else {
       console.log(id);
       await setNextStep(true);
+      setActiveStep(activeStep + 1);
     }
-    await setActiveStep(activeStep + 1);
+    Cookies.remove("buyNowId");
   };
+  
 
   const handleBackStep = () => {
     setActiveStep(activeStep - 1);
@@ -121,9 +139,9 @@ export default function Checkout() {
                 Thank you for your order.
               </Typography>
               <Typography variant="subtitle1">
-                Your order number is #{orderId["orderId"]}. We have emailed your order
-                confirmation, and will send you an update when your order has
-                shipped.
+                Your order number is #{orderId["orderId"]}. We have emailed your
+                order confirmation, and will send you an update when your order
+                has shipped.
               </Typography>
             </React.Fragment>
           ) : (
