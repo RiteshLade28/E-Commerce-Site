@@ -11,6 +11,7 @@ const urls = {
     create: "/cartItem?id={id}",
     update: "/cartItem?id={id}",
     delete: "/cartItem?id={id}",
+    deleteAll: "/cartItems/",
   },
   product: {
     get: "/products/?id={id}",
@@ -19,7 +20,7 @@ const urls = {
     get: "/auth/users",
   },
   order: {
-    get: "/orders/?id={id}",
+    get: "/orders/",
     create: "/orders/?id={id}",
     createCart: "/orders/cart/",
     update: "/orders/?id={id}",

@@ -43,44 +43,55 @@ export default function Checkout() {
 
   const { productId } = useParams();
 
+  const url = new URL(window.location.href).pathname.split("/")[2];
+  console.log(url);
+
   const handleNextStep = async () => {
     console.log(productId);
     if (activeStep === steps.length - 1) {
       // Logic for sending the order request
       const token = Cookies.get("token");
       const userId = Cookies.get("userId");
-      const buyNowId = Cookies.get("buyNowId");
-  
+
       const requestBody = {
         orderPayment,
         orderAddress,
       };
-  
+
       let response;
-      if (buyNowId) {
-        response = apiClient
-          .post(urls.order.create.replace("{id}", id), requestBody, {
+      if (url !== "cart") {
+        response = apiClient.post(
+          urls.order.create.replace("{id}", id),
+          requestBody,
+          {
             headers: {
               Authorization: `Bearer ${token}`,
               userId: userId,
             },
-          });
+          }
+        );
       } else {
-        response = apiClient
-          .post(urls.order.createCart, requestBody, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              userId: userId,
-            },
-          });
+        response = apiClient.post(urls.order.createCart, requestBody, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            userId: userId,
+          },
+        });
       }
-  
+
       response
         .then((response) => {
           console.log(response.data);
           setOrderId(response.data);
           // Additional logic after successfully adding the order
           if (response.status === 200) {
+            apiClient.delete(urls.cart.deleteAll, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                userId: userId,
+              },
+            });
+            setPlaceOrder(true);
             setActiveStep(activeStep + 1);
           }
         })
@@ -88,14 +99,13 @@ export default function Checkout() {
           console.log(error);
           // Handle error if needed
         });
+
     } else {
       console.log(id);
       await setNextStep(true);
       setActiveStep(activeStep + 1);
     }
-    Cookies.remove("buyNowId");
   };
-  
 
   const handleBackStep = () => {
     setActiveStep(activeStep - 1);

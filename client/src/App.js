@@ -11,6 +11,7 @@ import Login from "./components/Auth/Login";
 import Store from "./components/BuyNow/Store";
 import Layout from "./components/Layout";
 import BuyNow from "./components/BuyNow/BuyNow";
+import Orders from "./components/Orders/Orders";
 
 function App() {
   const location = useLocation();
@@ -31,6 +32,8 @@ function App() {
           path="/buyNow/:productId"
         />
         <Route element={<Layout component={BuyNow} />} path="/buyNow/cart" />
+        <Route element={<Layout component={Orders} />} path="/orders" />
+        {/* <Route path="/profile" /> */}
         <Route element={<ProductDesc />} path="/product/:productId" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<Login />} path="/login" />

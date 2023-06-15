@@ -23,7 +23,7 @@ export default function PrimarySearchAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const settings = [
     { name: "Profile", link: "/profile" },
-    { name: "Account", link: "/account" },
+    { name: "Orders", link: "/orders" },
     { name: "Logout", link: "/logout" },
   ];
 
@@ -140,7 +140,12 @@ export default function PrimarySearchAppBar() {
                   key={setting.name}
                   onClick={() => handleCloseUserMenu(setting)}
                 >
-                  <Typography textAlign="center">{setting.name}</Typography>
+                  <Typography
+                    textAlign="center"
+                    onClick={() => navigate(setting.link)}
+                  >
+                    {setting.name}
+                  </Typography>
                 </MenuItem>
               ))}
             </Menu>

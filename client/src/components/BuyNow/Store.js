@@ -5,7 +5,6 @@ const NextStepContext = createContext(null);
 const OrderPaymentContext = createContext(null);
 const IdContext = createContext(null);
 const PlaceOrder = createContext(null);
-const BuyFromCartContext = createContext(null);
 
 const address = {
   firstName: "",
@@ -31,26 +30,21 @@ const Store = ({ children }) => {
   const [orderPayment, setOrderPayment] = useState(payment);
   const [id, setId] = useState(null);
   const [placeOrder, setPlaceOrder] = useState(false);
-  const [buyFromCart, setBuyFromCart] = useState(false);
 
   return (
-    <BuyFromCartContext.Provider value={{ buyFromCart, setBuyFromCart }}>
-      <PlaceOrder.Provider value={{ placeOrder, setPlaceOrder }}>
-        <IdContext.Provider value={{ id, setId }}>
-          <OrderPaymentContext.Provider
-            value={{ orderPayment, setOrderPayment }}
-          >
-            <NextStepContext.Provider value={{ nextStep, setNextStep }}>
-              <OrderAddressContext.Provider
-                value={{ orderAddress, setOrderAddress }}
-              >
-                {children}
-              </OrderAddressContext.Provider>
-            </NextStepContext.Provider>
-          </OrderPaymentContext.Provider>
-        </IdContext.Provider>
-      </PlaceOrder.Provider>
-    </BuyFromCartContext.Provider>
+    <PlaceOrder.Provider value={{ placeOrder, setPlaceOrder }}>
+      <IdContext.Provider value={{ id, setId }}>
+        <OrderPaymentContext.Provider value={{ orderPayment, setOrderPayment }}>
+          <NextStepContext.Provider value={{ nextStep, setNextStep }}>
+            <OrderAddressContext.Provider
+              value={{ orderAddress, setOrderAddress }}
+            >
+              {children}
+            </OrderAddressContext.Provider>
+          </NextStepContext.Provider>
+        </OrderPaymentContext.Provider>
+      </IdContext.Provider>
+    </PlaceOrder.Provider>
   );
 };
 export default Store;
@@ -60,5 +54,4 @@ export {
   OrderPaymentContext,
   IdContext,
   PlaceOrder,
-  BuyFromCartContext,
 };

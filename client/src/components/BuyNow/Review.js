@@ -9,6 +9,7 @@ import Store, {
   OrderPaymentContext,
   NextStepContext,
   PlaceOrder,
+  IdContext,
 } from "./Store";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
@@ -23,6 +24,7 @@ export default function Review() {
   const { orderAddress, setOrderAddress } = useContext(OrderAddressContext);
   const { nextStep, setNextStep } = useContext(NextStepContext);
   const { placeOrder, setPlaceOrder } = useContext(PlaceOrder);
+  const { id, setId } = useContext(IdContext);
 
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("");
@@ -36,15 +38,17 @@ export default function Review() {
     { name: "Expiry date", detail: orderPayment.expDate },
     { name: "CVV", detail: orderPayment.cvv },
   ];
-  const buyNowId = Cookies.get("buyNowId");
+
+  const url = new URL(window.location.href).pathname.split("/")[2];
+  console.log(url);
 
   useEffect(() => {
     const token = Cookies.get("token");
     const userId = Cookies.get("userId");
 
-    if (buyNowId) {
+    if (url !== "cart") {
       apiClient
-        .get(urls.product.get.replace("{id}", buyNowId), {
+        .get(urls.product.get.replace("{id}", id), {
           headers: {
             Authorization: `Bearer ${token}`,
             userId: userId,
@@ -115,7 +119,7 @@ export default function Review() {
           </React.Fragment>
         ))}
 
-        {!buyNowId ? (
+        {url && url === "cart" ? (
           <ListItem sx={{ py: 1, px: 0 }}>
             <ListItemText primary="Total Items" />
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -126,8 +130,7 @@ export default function Review() {
         <ListItem sx={{ py: 1, px: 0 }}>
           <ListItemText primary="Total Price" />
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            
-            {buyNowId
+            {url && url !== "cart"
               ? products && products[0]
                 ? `₹${products[0].price}`
                 : ""

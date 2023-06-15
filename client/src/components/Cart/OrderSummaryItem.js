@@ -28,7 +28,6 @@ const useStyles = makeStyles({
 
 export default function MediaCard({ price, totalItems }) {
   const navigate = useNavigate();
-  const { buyFromCart, setBuyFromCart } = useContext(BuyFromCartContext);
 
 
   const classes = useStyles();
@@ -81,7 +80,6 @@ export default function MediaCard({ price, totalItems }) {
               size="large"
               color="secondary"
               onClick={() => {
-                setBuyFromCart(true);
                 navigate("/buyNow/cart");
               }}
             >

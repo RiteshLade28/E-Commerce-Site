@@ -7,6 +7,8 @@ import jwt
 import bcrypt
 from functools import wraps
 from datetime import datetime, timedelta
+import itertools
+
 
 app = Flask(__name__)
 CORS(app)
@@ -241,6 +243,13 @@ def addProduct(current_user):
     return make_response(msg, status_code)
 
 
+@app.route(route + "/cartItems/", methods=["OPTIONS"])
+def handleCartItemsOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
 @app.route(route + '/cartItems/')
 @token_required
 def cartItems(current_user):
@@ -280,6 +289,23 @@ def cartItems(current_user):
     print("items " + str(totalItems))
     return jsonify(response)
 
+@app.route(route + "/cartItems/", methods=["DELETE"])
+@token_required
+def clearCart(current_user):
+    userId = current_user['userId']
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("DELETE FROM kart WHERE userId = ?", (userId,))
+            conn.commit()
+            msg = "Cart cleared successfully"
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+    return make_response(msg, status_code)
 
 @app.route(route + "/cartItem", methods=["OPTIONS"])
 def handleCartItemOptions():
@@ -394,15 +420,17 @@ def placeOrder(current_user):
     productId = request.args.get('id')
     userId = current_user['userId']  # Extract userId from the decoded token
 
+    
     orderId = None
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
 
         try:
             # Fetch the product price
-            cur.execute("SELECT price FROM products WHERE productId = ?", (productId,))
-            product_price = cur.fetchone()[0]
-
+            cur.execute("SELECT * FROM products WHERE productId = ?", (productId,))
+            product = cur.fetchone()
+            price = product[2]
+            print("price " + str(price))
             # Insert into payments table
             cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
                         (userId, orderPayment['cardName'], orderPayment['cardNumber'], orderPayment['expDate'], orderPayment['cvv'], datetime.now()))
@@ -411,13 +439,15 @@ def placeOrder(current_user):
 
              # Insert into orders table
             cur.execute("INSERT INTO orders (userId, paymentId) VALUES ( ?, ?)", 
-                        (userId, orderDetailsId, paymentId))
+                        (userId, paymentId))
 
             orderId = cur.lastrowid  # Get the ID of the inserted order
-
+            # print(productId)  
+            
             # Insert into orderDetails table
+            quantity = 1
             cur.execute("INSERT INTO orderDetails (orderId, productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                        (orderId, productId, 1, product_price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
+                        (orderId, productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
 
            
             msg = "Order placed successfully"
@@ -427,8 +457,9 @@ def placeOrder(current_user):
             conn.rollback()
             msg = "Error occurred: " + str(e)
             status_code = 500
+            traceback.print_exc()
 
-    return jsonify({"orderId": orderId}), status_code
+    return jsonify({"orderId": orderId, "msg":msg}), status_code
 
 @app.route(route + '/orders/cart/',  methods=["OPTIONS"])
 # @token_required
@@ -453,26 +484,25 @@ def placeOrderFromCart(current_user):
             cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
                         (userId, orderPayment['cardName'], orderPayment['cardNumber'], orderPayment['expDate'], orderPayment['cvv'], datetime.now()))
             paymentId = cur.lastrowid
-            cur.execute("SELECT * FROM kart WHERE userId = ?", (userId,))
+            cur.execute("SELECT p.productId, k.quantity, p.price FROM kart as k, products as p WHERE k.productId = p.productId and userId = ?", (userId,))
             cartItems = cur.fetchall()
 
             cur.execute("INSERT INTO orders (userId, paymentId) VALUES (?, ?)", (userId, paymentId))
             orderId = cur.lastrowid  # Get the ID of the inserted order
 
+            print(cartItems)
             for item in cartItems:
                 productId = item[0]
-                quantity = 1
+                quantity = item[1]
                 price = item[2]
                 # ... Retrieve other necessary information for the order
 
-                cur.execute("INSERT INTO orderDetails (orderId ,productId, quantity, price, address, landmark, city, pincode, state, country, orderDate, orderId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ( orderId ,productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now(), 'NULL'))
+                cur.execute("INSERT INTO orderDetails (orderId ,productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ( orderId ,productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
         
             
             conn.commit()
             status_code = 200
             msg = "Order placed successfully"
-
-
 
         except:
             conn.rollback()
@@ -480,9 +510,103 @@ def placeOrderFromCart(current_user):
             status_code = 500
             traceback.print_exc()
 
-    return jsonify({"orderId": orderId}), status_code
+    return jsonify({"orderId": orderId, "msg": msg}), status_code
     
     
+@app.route(route + "/orders/", methods=["GET"])
+@token_required
+def getOrders(current_user):
+    userId = current_user["userId"]  # Extract userId from the decoded token
+
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                SELECT orders.orderId, orderDetails.productId, orderDetails.quantity, orderDetails.price, orderDetails.address, orderDetails.landmark, orderDetails.city, orderDetails.pincode, orderDetails.state, orderDetails.country, orderDetails.orderDate
+                FROM orders
+                JOIN orderDetails ON orders.orderId = orderDetails.orderId
+                WHERE orders.userId = ?
+                """,
+                (userId,),
+            )
+
+            orders = cur.fetchall()
+
+            orderedProducts = []
+            for order in orders:
+                (
+                    orderId,
+                    productId,
+                    quantity,
+                    price,
+                    address,
+                    landmark,
+                    city,
+                    pincode,
+                    state,
+                    country,
+                    orderDate,
+                ) = order
+
+                cur.execute(
+                    """
+                    SELECT products.productId, products.name, products.description, products.price, products.image, categories.name
+                    FROM products
+                    JOIN categories ON products.categoryId = categories.categoryId
+                    WHERE products.productId = ?
+                    """,
+                    (productId,),
+                )
+
+                product = cur.fetchone()
+                (
+                    productId,
+                    productName,
+                    productDescription,
+                    productPrice,
+                    productImage,
+                    categoryName,
+                ) = product
+
+                orderItem = {
+                    "orderId": orderId,
+                    "title": productName,
+                    "quantity": quantity,
+                    "price": productPrice,
+                    "image": productImage,
+                    "shipping": address,
+                    "payment": "Credit Card",  # Replace with appropriate payment method
+                    "status": "Delivered",  # Replace with appropriate order status
+                    "deliveryDate": orderDate,
+                }
+
+                orderedProducts.append(orderItem)
+
+            formattedOrderedProducts = []
+            for orderId, group in itertools.groupby(orderedProducts, key=lambda x: x["orderId"]):
+                group_list = list(group)
+                total_price = sum(order["price"] for order in group_list)
+                formattedOrderedProducts.append({
+                    "id": str(orderId),
+                    "totalPrice": str(total_price),
+                    "orders": group_list
+                })
+
+            return {
+                "message": "Orders retrieved successfully",
+                "status_code": 200,
+                "orderedProducts": formattedOrderedProducts,
+            }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+
+
+
 
 if __name__ == "__main__":
     app.run()

@@ -29,8 +29,7 @@ export default function MediaCard({
 
   const buyNow = (id) => {
     console.log(token, userId);
-    setId(id);
-    Cookies.set("buyNowId", id);
+    setId(id);  
     navigate("/buyNow/" + id);
   };
   const addToCart = (id) => {
