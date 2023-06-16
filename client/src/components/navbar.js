@@ -83,42 +83,56 @@ export default function PrimarySearchAppBar() {
 
           <Box sx={{ flexGrow: 0 }}>
             {Cookies.get("firstname") ? (
-              <Tooltip title="Open settings">
+              <>
+                <Tooltip title="Open settings">
+                  <IconButton
+                    size="large"
+                    aria-label="account of current user"
+                    aria-controls="menu-appbar"
+                    aria-haspopup="true"
+                    onClick={handleOpenUserMenu}
+                    sx={{ p: 0 }}
+                    color="inherit"
+                  >
+                    <AccountCircle />
+                  </IconButton>
+                </Tooltip>
                 <IconButton
                   size="large"
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleOpenUserMenu}
-                  sx={{ p: 0 }}
+                  aria-label="show 17 new notifications"
                   color="inherit"
+                  onClick={() => {
+                    navigate("/cart");
+                  }}
                 >
-                  <AccountCircle />
+                  <Badge color="error">
+                    <ShoppingCartIcon />
+                  </Badge>
                 </IconButton>
-              </Tooltip>
+              </>
             ) : (
-              <Button
-                variant="primary"
-                padding="10px"
-                onClick={() => {
-                  navigate("/login");
-                }}
-              >
-                Login
-              </Button>
+              <>
+                <Button
+                  variant="primary"
+                  padding="10px"
+                  onClick={() => {
+                    navigate("/login");
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  variant="primary"
+                  padding="10px"
+                  onClick={() => {
+                    navigate("/beASeller");
+                  }}
+                >
+                  Be a Seller
+                </Button>
+              </>
             )}
-            <IconButton
-              size="large"
-              aria-label="show 17 new notifications"
-              color="inherit"
-              onClick={() => {
-                navigate("/cart");
-              }}
-            >
-              <Badge color="error">
-                <ShoppingCartIcon />
-              </Badge>
-            </IconButton>
+
             <Menu
               sx={{ mt: "45px" }}
               id="menu-appbar"

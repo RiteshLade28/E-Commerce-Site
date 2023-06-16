@@ -2,6 +2,7 @@ const urls = {
   auth: {
     login: "/auth/login/",
     signup: "/auth/signup",
+    sellerSignUp: "/auth/seller/signup/",
   },
   checkauth: {
     get: "/checkauth",
@@ -25,6 +26,10 @@ const urls = {
     createCart: "/orders/cart/",
     update: "/orders/?id={id}",
     delete: "/orders/?id={id}",
+  },
+  category: {
+    get: "/categories/",
+    create: "/categories/",
   },
 };
 

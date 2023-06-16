@@ -9,9 +9,8 @@ import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import { useNavigate } from "react-router-dom";
 import Store, {IdContext } from "../BuyNow/Store.js";
 
 export default function MediaCard({
@@ -46,7 +45,7 @@ export default function MediaCard({
           console.log(response);
           toast("Item Added to Cart Successfully", { type: "success" });
         } else {
-          toast("Failed to Add Item to Cart", { type: "success" });
+          toast.info("Failed to Add Item to Cart");
         }
       })
       .catch((error) => {

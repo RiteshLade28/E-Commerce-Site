@@ -102,47 +102,66 @@ conn = sqlite3.connect("ecart.db")
 # 		)''')
 
 
-conn.execute('''CREATE TABLE orders
-		(orderId INTEGER PRIMARY KEY,
-        userId INTEGER,
-        paymentId INTEGER,
-        FOREIGN KEY(userId) REFERENCES users(userId),
-        FOREIGN KEY(paymentId) REFERENCES payments(paymentId)
-		)''')
+# conn.execute('''CREATE TABLE orders
+# 		(orderId INTEGER PRIMARY KEY,
+#         userId INTEGER,
+#         paymentId INTEGER,
+#         FOREIGN KEY(userId) REFERENCES users(userId),
+#         FOREIGN KEY(paymentId) REFERENCES payments(paymentId)
+# 		)''')
 
-conn.execute('''CREATE TABLE orderDetails
-        (orderDetailsId INTEGER PRIMARY KEY,
-        orderId INTEGER,
-        productId INTEGER,
-        quantity INTEGER,
-        price REAL,
+# conn.execute('''CREATE TABLE orderDetails
+#         (orderDetailsId INTEGER PRIMARY KEY,
+#         orderId INTEGER,
+#         productId INTEGER,
+#         quantity INTEGER,
+#         price REAL,
+#         address TEXT,
+#         landmark TEXT,
+#         city TEXT,
+#         pincode TEXT,
+#         state TEXT,
+#         country TEXT,
+#         orderDate TEXT,
+#         shippingDate TEXT,
+#         deliveryDate TEXT,
+#         orderStatus TEXT,
+#         FOREIGN KEY(productId) REFERENCES products(productId)
+#         FOREIGN KEY(orderId) REFERENCES orders(orderId)
+#         )''')
+
+# conn.execute('''CREATE TABLE payments
+#         (paymentId INTEGER PRIMARY KEY,
+#         userId INTEGER,
+#         nameOnCard TEXT,
+#         cardNumber TEXT,
+#         expiryDate TEXT,
+#         cvv TEXT,
+#         paymentDate TEXT,
+#         FOREIGN KEY(userId) REFERENCES users(userId)
+#         )''')
+
+conn.execute('''CREATE TABLE sellers
+        (sellerId INTEGER PRIMARY KEY,
+        firstName TEXT,
+        lastName TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        salt INTEGER,
+        phoneNumber TEXT,
         address TEXT,
-        landmark TEXT,
         city TEXT,
         pincode TEXT,
         state TEXT,
-        country TEXT,
-        orderDate TEXT,
-        shippingDate TEXT,
-        deliveryDate TEXT,
-        orderStatus TEXT,
-        FOREIGN KEY(productId) REFERENCES products(productId)
-        FOREIGN KEY(orderId) REFERENCES orders(orderId)
+        country TEXT
         )''')
 
-conn.execute('''CREATE TABLE payments
-        (paymentId INTEGER PRIMARY KEY,
-        userId INTEGER,
-        nameOnCard TEXT,
-        cardNumber TEXT,
-        expiryDate TEXT,
-        cvv TEXT,
-        paymentDate TEXT,
-        FOREIGN KEY(userId) REFERENCES users(userId)
-        )''')
-
-
-
+# conn.execute('''CREATE TABLE sellerCategory (
+#         seller_id INT,
+#         category_id INT,
+#         FOREIGN KEY (seller_id) REFERENCES sellers(id),
+#         FOREIGN KEY (category_id) REFERENCES categories(id)
+#         )''')
 
 
 # for product in allProducts:

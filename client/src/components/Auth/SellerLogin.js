@@ -25,6 +25,7 @@ import Cookies from "js-cookie";
 // import Store, { CurrentUserContext } from "./Store.js";
 import bcrypt from "bcryptjs";
 import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const defaultTheme = createTheme();
 
@@ -44,27 +45,29 @@ export default function SignInSide() {
         // Handle error if password hashing fails
         return;
       }
-      let login = await apiClient.post(urls.auth.login, {
-        email: email,
-        password: password,
-      });
-      if (login.status === 200) {
-        // const newState = {
-        //   firstname: login.data.firstname,
-        //   lastname: login.data.lastname,
-        //   email: login.data.email,
-        //   token: login.data.token,
-        // };
-        await Cookies.set("token", login.data.token);
-        await Cookies.set("email", login.data.email);
-        await Cookies.set("userId", login.data.userId);
-        await Cookies.set("firstname", login.data.firstName);
-        await Cookies.set("lastname", login.data.lastName);
-        // setCurrentUser(newState);
-        navigate("/");
-      } else {
-        toast.info("Invalid Credentials");
-      }
+      await apiClient
+        .post(urls.auth.login, {
+          email: email,
+          password: password,
+        })
+        .then((response) => {
+          console.log(response);
+          if (response.status === 200) {
+            Cookies.set("token", response.data.token);
+            Cookies.set("email", response.data.email);
+            Cookies.set("userId", response.data.userId);
+            Cookies.set("firstname", response.data.firstName);
+            Cookies.set("lastname", response.data.lastName);
+            // setCurrentUser(newState);
+            toast.success("message")
+            navigate("/");
+          } else {
+            toast.error("message")
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     });
   };
 
@@ -104,7 +107,7 @@ export default function SignInSide() {
                 <LockOutlinedIcon />
               </Avatar>
               <Typography component="h1" variant="h5">
-                Sign in
+                Sign in as Seller
               </Typography>
               <Box
                 component="form"

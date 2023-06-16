@@ -12,12 +12,14 @@ import Store from "./components/BuyNow/Store";
 import Layout from "./components/Layout";
 import BuyNow from "./components/BuyNow/BuyNow";
 import Orders from "./components/Orders/Orders";
+import BeASeller from "./components/Auth/BeASeller";
+import SellerLogin from "./components/Auth/SellerLogin";
 
 function App() {
   const location = useLocation();
 
   const isLoginOrSignupPage =
-    location.pathname === "/login" || location.pathname === "/signup";
+    location.pathname === "/login" || location.pathname === "/signup" || location.pathname === "/beASeller"|| location.pathname === "/sellerLogin" ;
   const shouldShowNavBarAndFooter = !isLoginOrSignupPage;
 
   return (
@@ -37,6 +39,8 @@ function App() {
         <Route element={<ProductDesc />} path="/product/:productId" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<Login />} path="/login" />
+        <Route element={<BeASeller />} path="/beASeller" />
+        <Route element={<SellerLogin />} path="/sellerLogin" />
       </Routes>
 
       {shouldShowNavBarAndFooter && <Footer />}

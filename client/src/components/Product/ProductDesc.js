@@ -22,7 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ProductCard from "./ProductCard";
 import { ToastContainer, toast } from "react-toastify";
 import Cookies from "js-cookie";
-import Store, {IdContext} from "../BuyNow/Store";
+import Store, { IdContext } from "../BuyNow/Store";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -87,6 +87,9 @@ const ProductDesc = () => {
   };
 
   useEffect(() => {
+    const id = new URL(window.location.href).pathname.split("/")[2];
+    console.log(id);
+
     apiClient
       .get(urls.product.get.replace("{id}", id), {
         headers: {

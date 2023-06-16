@@ -604,7 +604,104 @@ def getOrders(current_user):
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
 
+@app.route(route + "/categories/", methods=["OPTIONS"])
+def handleCategoriesOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
+@app.route(route + "/categories/", methods=["GET"])
+def getCategories():
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                SELECT categoryId, name
+                FROM categories
+                """
+            )
+
+            categories = cur.fetchall()
+
+            formattedCategories = []
+            for category in categories:
+                categoryId, name = category
+                formattedCategories.append({"id": categoryId, "name": name})
+
+            return {
+                "message": "Categories retrieved successfully",
+                "status_code": 200,
+                "categories": formattedCategories,
+            }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+
+@app.route(authRoute + "/seller/signup/", methods=["OPTIONS"])
+def handleSellerSignUpOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route(authRoute + "/seller/signup/", methods=["POST"])
+def sellerSignUp():
+    data = request.json
+    firstName = data["firstName"]
+    lastName = data["lastName"]
+    email = data["email"]
+    password = data["password"]
+    categories = data["categories"]
+    phoneNumber = data["phoneNumber"]
+    address = data["address"]
+    city = data["city"]
+    pincode = data["pincode"]
+    state = data["state"]
+    country = data["country"]
+
+    with sqlite3.connect("ecart.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT email FROM users WHERE email = ?", (email,))
+            if cur.fetchone() is not None:
+                return jsonify({"message": "Email already exists"}), 400
+
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+            cur.execute(
+                "INSERT INTO sellers (firstName, lastName, email, password, salt, phoneNumber, address, city, pincode, state, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (firstName, lastName, email, hashed_password, salt, phoneNumber, address, city, pincode, state, country),
+            )
+
+            seller_id = cur.lastrowid  # Get the ID of the newly inserted seller
+
+            for category in categories:
+                cur.execute("SELECT categoryId FROM categories WHERE name = ?", (category,))
+                category_id = cur.fetchone()
+                if category_id is None:
+                    cur.execute("INSERT INTO categories (name) VALUES (?)", (category,))
+                    category_id = cur.lastrowid
+                else:
+                    category_id = category_id[0]
+
+                cur.execute("INSERT INTO sellerCategory (seller_id, category_id) VALUES (?, ?)", (seller_id, category_id))
+
+            conn.commit()
+            status_code = 201
+            msg = "Seller signed up successfully"
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    return jsonify({"msg": msg}), status_code
 
 
 
