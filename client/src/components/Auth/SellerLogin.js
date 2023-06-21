@@ -46,7 +46,7 @@ export default function SignInSide() {
         return;
       }
       await apiClient
-        .post(urls.auth.login, {
+        .post(urls.auth.sellerLogin, {
           email: email,
           password: password,
         })
@@ -59,10 +59,10 @@ export default function SignInSide() {
             Cookies.set("firstname", response.data.firstName);
             Cookies.set("lastname", response.data.lastName);
             // setCurrentUser(newState);
-            toast.success("message")
-            navigate("/");
+            toast.success("Successfully Logged In as Seller");
+            navigate("/seller/dashboard");
           } else {
-            toast.error("message")
+            toast.error("Invalid Credentials");
           }
         })
         .catch((error) => {
@@ -179,7 +179,7 @@ export default function SignInSide() {
                   <Grid item>
                     <Link
                       to={{
-                        pathname: `/signup`,
+                        pathname: `/sellerSignup`,
                       }}
                     >
                       {"Don't have an account? Sign Up"}

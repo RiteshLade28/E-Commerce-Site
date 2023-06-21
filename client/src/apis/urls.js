@@ -3,6 +3,7 @@ const urls = {
     login: "/auth/login/",
     signup: "/auth/signup",
     sellerSignUp: "/auth/seller/signup/",
+    sellerLogin: "/auth/seller/login/",
   },
   checkauth: {
     get: "/checkauth",
@@ -31,6 +32,9 @@ const urls = {
     get: "/categories/",
     create: "/categories/",
   },
+  getDashboardData:{
+    get: "/seller/dashboard/",
+  }
 };
 
 export default urls;

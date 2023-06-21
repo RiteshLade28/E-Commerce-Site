@@ -14,16 +14,28 @@ import BuyNow from "./components/BuyNow/BuyNow";
 import Orders from "./components/Orders/Orders";
 import BeASeller from "./components/Auth/BeASeller";
 import SellerLogin from "./components/Auth/SellerLogin";
+import Dashboard from "./components/Seller Dashboard/Dashboard";
+import SellerNavbar from "./components/Seller Dashboard/Navbar.js";
+import Products from "./components/Seller Dashboard/Products.js";
+import SellerOrders from "./components/Seller Dashboard/Orders.js";
 
 function App() {
   const location = useLocation();
 
   const isLoginOrSignupPage =
-    location.pathname === "/login" || location.pathname === "/signup" || location.pathname === "/beASeller"|| location.pathname === "/sellerLogin" ;
+    location.pathname === "/login" ||
+    location.pathname === "/signup" ||
+    location.pathname === "/beASeller" ||
+    location.pathname === "/sellerLogin" ||
+    location.pathname === "/sellerSignup" ||
+    location.pathname.startsWith("/seller/");
+
+  const shouldShowSellerNavbar = location.pathname.startsWith("/seller/");
   const shouldShowNavBarAndFooter = !isLoginOrSignupPage;
 
   return (
     <Store>
+      {shouldShowSellerNavbar && <SellerNavbar />}
       {shouldShowNavBarAndFooter && <NavBar />}
 
       <Routes>
@@ -39,8 +51,11 @@ function App() {
         <Route element={<ProductDesc />} path="/product/:productId" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<Login />} path="/login" />
-        <Route element={<BeASeller />} path="/beASeller" />
+        <Route element={<BeASeller />} path="/sellerSignup" />
         <Route element={<SellerLogin />} path="/sellerLogin" />
+        <Route element={<Dashboard />} path="/seller/dashboard" />
+        <Route element={<Products />} path="/seller/products" />
+        <Route element={<SellerOrders />} path="/seller/orders" />
       </Routes>
 
       {shouldShowNavBarAndFooter && <Footer />}

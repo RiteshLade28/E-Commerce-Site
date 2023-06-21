@@ -8,6 +8,7 @@ import bcrypt
 from functools import wraps
 from datetime import datetime, timedelta
 import itertools
+import random
 
 
 app = Flask(__name__)
@@ -446,8 +447,8 @@ def placeOrder(current_user):
             
             # Insert into orderDetails table
             quantity = 1
-            cur.execute("INSERT INTO orderDetails (orderId, productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                        (orderId, productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
+            cur.execute("INSERT INTO orderDetails (orderId, productId, quantity, price, address, landmark, city, pincode, state, country, orderDate, orderStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                        (orderId, productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now(), "Order Placed"))
 
            
             msg = "Order placed successfully"
@@ -497,7 +498,7 @@ def placeOrderFromCart(current_user):
                 price = item[2]
                 # ... Retrieve other necessary information for the order
 
-                cur.execute("INSERT INTO orderDetails (orderId ,productId, quantity, price, address, landmark, city, pincode, state, country, orderDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ( orderId ,productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now()))
+                cur.execute("INSERT INTO orderDetails (orderId ,productId, quantity, price, address, landmark, city, pincode, state, country, orderDate, orderStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ( orderId ,productId, quantity, price, orderAddress['address'], orderAddress['landmark'], orderAddress['city'], orderAddress['pinCode'], orderAddress['state'], orderAddress['country'], datetime.now(), "Order Placed"))
         
             
             conn.commit()
@@ -642,7 +643,7 @@ def getCategories():
         return {"message": "Error occurred: " + str(e), "status_code": 500}
 
 
-@app.route(authRoute + "/seller/signup/", methods=["OPTIONS"])
+@app.route(authRoute + "/seller/", methods=["OPTIONS"])
 def handleSellerSignUpOptions():
     response = jsonify({})
     response.headers["Access-Control-Allow-Methods"] = "*"
@@ -664,6 +665,12 @@ def sellerSignUp():
     pincode = data["pincode"]
     state = data["state"]
     country = data["country"]
+    accountNumber = data["accountNumber"]
+    accountHolderName = data["accountHolderName"]
+    bankName = data["bankName"]
+    branchName = data["branchName"]
+    ifscCode = data["ifscCode"]
+
 
     with sqlite3.connect("ecart.db") as conn:
         cur = conn.cursor()
@@ -680,6 +687,13 @@ def sellerSignUp():
             )
 
             seller_id = cur.lastrowid  # Get the ID of the newly inserted seller
+
+            accountBalance = round(random.uniform(10000, 100000), 2)
+
+            cur.execute(
+                "INSERT INTO sellerAccounts (sellerId, accountNumber, accountHolderName, accountBalance, bankName, branchName, ifscCode) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (seller_id, accountNumber, accountHolderName, accountBalance, bankName, branchName, ifscCode),
+            )
 
             for category in categories:
                 cur.execute("SELECT categoryId FROM categories WHERE name = ?", (category,))
@@ -704,6 +718,168 @@ def sellerSignUp():
     return jsonify({"msg": msg}), status_code
 
 
+@app.route(authRoute + "/seller/login/", methods=["POST"])
+def sellerLogin():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    print(email)
+
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM sellers WHERE email = ?", (email,))
+        user = cur.fetchone()
+        if user is None:
+            return jsonify({"message": "Invalid credentials"}), 400
+        else:
+            db_password = user[4]  # Assuming password hash is stored in the 4th column
+            salt = user[5]  # Assuming salt is stored in the 6th column
+
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+            if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
+                expiry = datetime.utcnow() + timedelta(days=1)
+                payload = {
+                    'email': email,
+                    'exp': expiry,
+                    "userId": user[0],  
+                    "email": email
+                }
+                token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm="HS256")
+                # print(token)
+                return jsonify({"token": token, "sellerId": user[0], "email": email, "firstName": user[1], "lastName": user[2]}), 200
+            else:
+                return jsonify({"message": "Password is incorrect"}), 400    
+
+
+
+# Seller APIs
+sellerRoute = "/api/seller"
+
+@app.route(sellerRoute + "/dashboard/", methods=["GET"])
+@token_required
+def getSellerDashboard(current_user):
+    userId = current_user["userId"]
+    print(userId)
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                select sum(p.price) from users as u join orders as o join orderDetails as od join products as p where o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?
+                """, (userId,)
+                )
+
+            totalRevenue = cur.fetchone()[0]
+
+            cur.execute(
+                """ 
+                select count(o.orderId) from orders as o join orderDetails as od join products as p where o.orderId = od.orderId and od.productId = p.productId and p.sellerId = ?
+                """, (userId,)
+            )
+
+            totalOrders = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                 select count(o.orderId) from orders as o join orderDetails as od join products as p where o.orderId = od.orderId and od.productId = p.productId and od.orderStatus = 'Order Placed' and p.sellerId = ?
+                """, (userId,)
+            )
+
+            pendingOrders = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                select count(od.productId) from orders as o, orderDetails as od where o.orderId = od.orderId and od.productId in (select productId from products where sellerId = ?);
+                """, (userId,)
+            )
+
+            totalCustomers = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                select name, image from products where sellerId = ?;
+                """, (userId,)
+            )
+            
+            latestProducts = cur.fetchall()
+
+            cur.execute (
+                """
+                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.price, od.orderStatus ,od.productId FROM users as u JOIN orders AS o JOIN orderDetails AS od JOIN products as p WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?;
+                """, (userId,)
+
+            )
+
+            orders = cur.fetchall()
+
+
+            months = {
+                    '01': 'Jan',
+                    '02': 'Feb',
+                    '03': 'Mar',
+                    '04': 'Apr',
+                    '05': 'May',
+                    '06': 'Jun',
+                    '07': 'Jul',
+                    '08': 'Aug',
+                    '09': 'Sep',
+                    '10': 'Oct',
+                    '11': 'Nov',
+                    '12': 'Dec'
+                }
+            sales_data = []
+
+            for month_number, month_name in months.items():
+                query = """
+                    SELECT SUM(p.price) AS totalSales
+                    FROM orders AS o
+                    JOIN orderDetails AS od ON o.orderId = od.orderId
+                    JOIN products AS p ON od.productId = p.productId
+                    WHERE od.orderStatus = 'Order Placed' 
+                    AND p.sellerId = ?
+                    AND strftime('%Y-%m', od.orderDate) = ?
+                """
+                cur.execute(query, (userId, f'2023-{month_number}'))
+                result = cur.fetchone()
+                total_sales = result[0] if result[0] is not None else 0
+                sales_data.append({'month': month_name, 'sales': total_sales})
+
+            # print(sales_data)
+
+            cur.execute(
+                """
+                SELECT p.name, count(p.productId)
+                FROM orders as o JOIN orderDetails as od JOIN products as p 
+                ON o.orderId = od.orderId and od.productId = p.productId
+                WHERE p.sellerId = ? group by p.price   
+                """, (userId,)
+            )
+
+            result = cur.fetchall()
+
+            product_counts = [{'name': row[0], 'value': row[1]} for row in result]
+
+
+            return {
+                "message": "Dashboard retrieved successfully",
+                "status_code": 200,
+                "dashboard": {
+                    "totalRevenue": totalRevenue,
+                    "totalOrders": totalOrders,
+                    "pendingOrders": pendingOrders,
+                    "totalCustomers": totalCustomers,
+                    "latestProducts": latestProducts,
+                    "orders": orders,
+                    "salesData": sales_data,
+                    "productCounts": product_counts
+                },
+            }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
 
 if __name__ == "__main__":
     app.run()

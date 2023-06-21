@@ -63,13 +63,14 @@ conn = sqlite3.connect("ecart.db")
 
 # conn.execute('''CREATE TABLE products
 # 		(productId INTEGER PRIMARY KEY,
+#       sellerId INTEGER,
 # 		name TEXT,
 # 		price REAL,
 # 		ratings REAL,
 # 		image TEXT,
 # 		categoryId INTEGER,
-#         description TEXT,
-#         stock INTEGER,
+#       description TEXT,
+#       stock INTEGER,
 # 		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
 # 		)''')
 
@@ -141,20 +142,20 @@ conn = sqlite3.connect("ecart.db")
 #         FOREIGN KEY(userId) REFERENCES users(userId)
 #         )''')
 
-conn.execute('''CREATE TABLE sellers
-        (sellerId INTEGER PRIMARY KEY,
-        firstName TEXT,
-        lastName TEXT,
-        email TEXT UNIQUE,
-        password TEXT,
-        salt INTEGER,
-        phoneNumber TEXT,
-        address TEXT,
-        city TEXT,
-        pincode TEXT,
-        state TEXT,
-        country TEXT
-        )''')
+# conn.execute('''CREATE TABLE sellers
+#         (sellerId INTEGER PRIMARY KEY,
+#         firstName TEXT,
+#         lastName TEXT,
+#         email TEXT UNIQUE,
+#         password TEXT,
+#         salt INTEGER,
+#         phoneNumber TEXT,
+#         address TEXT,
+#         city TEXT,
+#         pincode TEXT,
+#         state TEXT,
+#         country TEXT
+#         )''')
 
 # conn.execute('''CREATE TABLE sellerCategory (
 #         seller_id INT,
@@ -162,6 +163,19 @@ conn.execute('''CREATE TABLE sellers
 #         FOREIGN KEY (seller_id) REFERENCES sellers(id),
 #         FOREIGN KEY (category_id) REFERENCES categories(id)
 #         )''')
+
+# conn.execute('''CREATE TABLE sellerAccounts
+#         (sellerAccountId INTEGER PRIMARY KEY,
+#         sellerId INTEGER,
+#         accountNumber TEXT,
+#         accountHolderName TEXT,
+#         accountBalance REAL,
+#         bankName TEXT,
+#         branchName TEXT,
+#         ifscCode TEXT,
+#         FOREIGN KEY(sellerId) REFERENCES sellers(sellerId)        
+#         )''')
+
 
 
 # for product in allProducts:

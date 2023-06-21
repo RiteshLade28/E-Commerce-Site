@@ -46,6 +46,12 @@ export default function SignUp() {
   const [pincode, setPincode] = useState("");
   const [sellItem, setSellItem] = useState([]);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -93,6 +99,11 @@ export default function SignUp() {
         pincode: pincode,
         state: state,
         country: country,
+        accountNumber: accountNumber,
+        accountHolderName: accountHolderName,
+        bankName: bankName,
+        branchName: branchName,
+        ifscCode: ifscCode,
       });
       if (signup.status === 201) {
         console.log(signup.data);
@@ -333,6 +344,74 @@ export default function SignUp() {
                     onChange={(e) => setCountry(e.target.value)}
                   />
                 </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="h6">Upload Documents</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    required
+                    fullWidth
+                    name="accountNumber"
+                    label="Account Number"
+                    type="accountNumber"
+                    id="accountNumber"
+                    autoComplete="accountNumber"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    required
+                    fullWidth
+                    name="accountHolderName"
+                    label="Account Holder Name"
+                    type="accountHolderName"
+                    id="accountHolderName"
+                    autoComplete="accountHolderName"
+                    value={accountHolderName}
+                    onChange={(e) => setAccountHolderName(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    required
+                    fullWidth
+                    name="bankName"
+                    label="Bank Name"
+                    type="bankName"
+                    id="bankName"
+                    autoComplete="bankName"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    required
+                    fullWidth
+                    name="branchName"
+                    label="Branch Name"
+                    type="branchName"
+                    id="branchName"
+                    autoComplete="branchName"
+                    value={branchName}
+                    onChange={(e) => setBranchName(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    required
+                    fullWidth
+                    name="ifscCode"
+                    label="IFSC Code"
+                    type="ifscCode"
+                    id="ifscCode"
+                    autoComplete="ifscCode"
+                    value={ifscCode}
+                    onChange={(e) => setIfscCode(e.target.value)}
+                  />
+                </Grid>
               </Grid>
               <Button
                 type="submit"
@@ -346,7 +425,7 @@ export default function SignUp() {
                 <Grid item>
                   <Link
                     to={{
-                      pathname: `/login`,
+                      pathname: `/sellerLogin`,
                     }}
                   >
                     Already have a Seller account? Sign in

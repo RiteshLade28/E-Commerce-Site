@@ -125,7 +125,7 @@ export default function PrimarySearchAppBar() {
                   variant="primary"
                   padding="10px"
                   onClick={() => {
-                    navigate("/beASeller");
+                    navigate("/sellerSignup");
                   }}
                 >
                   Be a Seller
