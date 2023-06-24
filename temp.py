@@ -11,10 +11,7 @@ cursor = conn.cursor()
 
 cursor.execute(
                 """
-                SELECT p.productId, count(p.productId)
-                FROM orders as o JOIN orderDetails as od JOIN products as p 
-                ON o.orderId = od.orderId and od.productId = p.productId
-                WHERE p.sellerId = ? group by p.price   
+                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || ', ' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus FROM users as u JOIN orders AS o JOIN orderDetails AS od JOIN products as p WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?;
                 """, (2,)
             )
 

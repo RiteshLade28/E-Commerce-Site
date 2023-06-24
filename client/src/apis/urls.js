@@ -34,7 +34,11 @@ const urls = {
   },
   getDashboardData:{
     get: "/seller/dashboard/",
-  }
+  },
+  sellerOrders: {
+    get: "/seller/orders/",
+    patch: "/seller/orders/",
+  },
 };
 
 export default urls;

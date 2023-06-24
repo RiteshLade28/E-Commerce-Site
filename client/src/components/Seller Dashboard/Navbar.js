@@ -22,6 +22,7 @@ import MailIcon from "@mui/icons-material/Mail";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircle from "@mui/icons-material/AccountCircle";
+import LogoutIcon from "@mui/icons-material/Logout";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import CategoryIcon from "@mui/icons-material/Category";
 import EqualizerIcon from "@mui/icons-material/Equalizer";
@@ -31,8 +32,6 @@ import Tooltip from "@mui/material/Tooltip";
 import Cookies from "js-cookie";
 
 const drawerWidth = 240;
-const firstname = Cookies.get("firstname");
-const lastname = Cookies.get("lastname");
 
 const openedMixin = (theme) => ({
   width: drawerWidth,
@@ -111,6 +110,8 @@ export default function MiniDrawer() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
+  const firstname = Cookies.get("firstname");
+  const lastname = Cookies.get("lastname");
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -158,9 +159,13 @@ export default function MiniDrawer() {
                   marginLeft: 1,
                   marginRight: "80px",
                 }}
+                onClick={() => {
+                  Cookies.remove("token");
+                  navigate("/sellerLogin");
+                }}
                 color="inherit"
               >
-                <AccountCircle />
+                <LogoutIcon />
               </IconButton>
             </Tooltip>
           </div>

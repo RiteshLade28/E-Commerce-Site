@@ -75,14 +75,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-
-// const productData = [
-//   { name: "Product 1", value: 500 },
-//   { name: "Product 2", value: 800 },
-//   { name: "Product 3", value: 1200 },
-//   // Add more products
-// ];
-
 const COLORS = [
   "#0088FE",
   "#00C49F",
@@ -363,7 +355,7 @@ const Dashboard = () => {
                     >
                       {chartData.map((entry, index) => (
                         <Cell
-                          key={`cell-${index}`}
+                          key={entry.number}
                           fill={COLORS[index % COLORS.length]}
                         />
                       ))}
@@ -380,7 +372,10 @@ const Dashboard = () => {
               Latest Products
             </Typography>
             {latestProducts?.map((product) => (
-              <Card sx={{ fullWidth: 400, marginBottom: "10px" }}>
+              <Card
+                key={product.orderId}
+                sx={{ fullWidth: 400, marginBottom: "10px" }}
+              >
                 <CardHeader
                   avatar={
                     <Avatar
@@ -419,7 +414,7 @@ const Dashboard = () => {
               </TableHead>
               <TableBody>
                 {orders?.map((order) => (
-                  <TableRow>
+                  <TableRow key={order.orderId}>
                     <TableCell>{order[0]}</TableCell>
                     <TableCell>
                       {order[1]} {order[2]}

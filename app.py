@@ -881,6 +881,135 @@ def getSellerDashboard(current_user):
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
 
+@app.route(sellerRoute + "/orders/", methods=["GET"])
+@token_required
+def getSellerOrders(current_user):
+    userId = current_user["userId"]
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """ 
+                select count(o.orderId) from orders as o join orderDetails as od join products as p where o.orderId = od.orderId and od.productId = p.productId and p.sellerId = ?
+                """, (userId,)
+            )
+
+            totalOrders = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                 select count(o.orderId) from orders as o join orderDetails as od join products as p where o.orderId = od.orderId and od.productId = p.productId and od.orderStatus = 'Order Placed' and p.sellerId = ?
+                """, (userId,)
+            )
+
+            pendingOrders = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                select count(od.productId) from orders as o, orderDetails as od where o.orderId = od.orderId and od.productId in (select productId from products where sellerId = ?);
+                """, (userId,)
+            )
+
+            totalCustomers = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || '-' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus, od.orderDetailsId FROM users as u JOIN orders AS o JOIN orderDetails AS od JOIN products as p WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?;
+                """, (userId,)
+            )
+
+            orders = cur.fetchall()
+            order_objects = []
+
+            for order in orders:
+                order_obj = {
+                    "id": order[0],
+                    "custName": order[1] + " " + order[2],
+                    "productName": order[3],
+                    "orderDate": order[4],
+                    "amount": order[7],
+                    "address": order[5],
+                    "email": order[6],
+                    "status": order[8],
+                    "orderDetailsId": order[9]
+                }
+                order_objects.append(order_obj)
+
+         
+            return {
+                "message": "Orders retrieved successfully",
+                "sellerOrders": {
+                    "totalOrders": totalOrders,
+                    "pendingOrders": pendingOrders,
+                    "totalCustomers": totalCustomers,
+                    "orders": order_objects,
+                },
+                "status_code": 200,
+            }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+
+@app.route(sellerRoute + "/orders/", methods=["PATCH"])
+@token_required
+def updateSellerOrders(current_user):
+    userId = current_user["userId"]
+    body = request.get_json() 
+    orderDetailsId = body.get('orderDetailsId')
+    orderStatus = body.get('orderStatus')
+    print(orderDetailsId)
+
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                UPDATE orderDetails set orderStatus = ? where orderDetailsId = ?;
+                """, (orderStatus, orderDetailsId,)
+            )
+
+            msg = "Status updated successfully"
+            conn.commit()
+
+            cur.execute(
+                """
+                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || '-' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus, od.orderDetailsId FROM users as u JOIN orders AS o JOIN orderDetails AS od JOIN products as p WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?;
+                """, (userId,)
+            )
+
+            orders = cur.fetchall()
+            order_objects = []
+
+            for order in orders:
+                order_obj = {
+                    "id": order[0],
+                    "custName": order[1] + " " + order[2],
+                    "productName": order[3],
+                    "orderDate": order[4],
+                    "amount": order[7],
+                    "address": order[5],
+                    "email": order[6],
+                    "status": order[8],
+                    "orderDetailsId": order[9]
+                }
+                order_objects.append(order_obj)
+
+            return {
+                "message": msg,
+                "sellerOrders": {
+                    "orders": order_objects,
+                },
+                "status_code": 200,
+            }
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+
 if __name__ == "__main__":
     app.run()
 

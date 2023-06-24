@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { alpha } from "@mui/material/styles";
 import Box from "@mui/material/Box";
@@ -12,156 +12,22 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
+import { Paper } from "@mui/material";
 import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
-import DeleteIcon from "@mui/icons-material/Delete";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { visuallyHidden } from "@mui/utils";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { Button } from "@mui/material";
 import SellsCard from "./SellsCard";
-
-function createData(
-  id,
-  custName,
-  productName,
-  orderDate,
-  modeOfPayment,
-  amount,
-  address,
-  email,
-  status
-) {
-  return {
-    id,
-    custName,
-    productName,
-    orderDate,
-    modeOfPayment,
-    amount,
-    address,
-    email,
-    status,
-  };
-}
-
-const initialRows = [
-  createData(
-    1,
-    "Snow Jon",
-    "Mobile",
-    "20/06/23",
-    "COD",
-    10000,
-    "Vimal Nagar, Taloda",
-    "snow@gmail.com",
-    "Shipped"
-  ),
-  createData(
-    2,
-    "Lannister Cersei",
-    "Laptop",
-    "20/06/23",
-    "UPI",
-    50000,
-    "Kamal Kanha Society, Pune",
-    "lannister@gmail.com",
-    "Pending"
-  ),
-  createData(
-    3,
-    "Lannister Jaime",
-    "Fan",
-    "20/06/23",
-    "UPI",
-    2500,
-    "Ambedkar nagar, Mumbai",
-    "jaime@gmail.com",
-    "Shipped"
-  ),
-  createData(
-    4,
-    "Stark Arya",
-    "Foot Ball",
-    "20/06/23",
-    "COD",
-    1000,
-    "Church Gate, Nagpur",
-    "stark@gmail.com",
-    "Pending"
-  ),
-  createData(
-    5,
-    "Targaryen Daenerys",
-    "Cricket Bat",
-    "20/06/23",
-    "UPI",
-    5000,
-    "Dwarka Circle, Delhi",
-    "targaryen@gmail.com",
-    "Delievered"
-  ),
-  createData(
-    1,
-    "Snow Jon",
-    "Mobile",
-    "20/06/23",
-    "COD",
-    15000,
-    "Vimal Nagar, Taloda",
-    "snow@gmail.com",
-    "Shipped"
-  ),
-  createData(
-    2,
-    "Lannister Cersei",
-    "Laptop",
-    "20/06/23",
-    "UPI",
-    5000,
-    "Kamal Kanha Society, Pune",
-    "lannister@gmail.com",
-    "Pending"
-  ),
-  createData(
-    3,
-    "Lannister Jaime",
-    "Fan",
-    "20/06/23",
-    "UPI",
-    5000,
-    "Ambedkar nagar, Mumbai",
-    "jaime@gmail.com",
-    "Shipped"
-  ),
-  createData(
-    4,
-    "Stark Arya",
-    "Foot Ball",
-    "20/06/23",
-    "COD",
-    5000,
-    "Church Gate, Nagpur",
-    "stark@gmail.com",
-    "Pending"
-  ),
-  createData(
-    5,
-    "Targaryen Daenerys",
-    "Cricket Bat",
-    "20/06/23",
-    "UPI",
-    5000,
-    "Dwarka Circle, Delhi",
-    "targaryen@gmail.com",
-    "Delievered"
-  ),
-];
+import apiClient from "../../apis/api-client";
+import urls from "../../apis/urls";
+import Cookies from "js-cookie";
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
@@ -215,12 +81,6 @@ const headCells = [
     numeric: false,
     disablePadding: false,
     label: "Order Date",
-  },
-  {
-    id: "modeOfPayment",
-    numeric: false,
-    disablePadding: false,
-    label: "Mode Of Payment",
   },
   {
     id: "amount",
@@ -348,9 +208,9 @@ function EnhancedTableToolbar(props) {
       )}
 
       {numSelected > 0 ? (
-        <Tooltip title="Delete">
+        <Tooltip title="Update the status of selected">
           <IconButton>
-            <DeleteIcon />
+            <DoneAllIcon />
           </IconButton>
         </Tooltip>
       ) : (
@@ -360,6 +220,7 @@ function EnhancedTableToolbar(props) {
           </IconButton>
         </Tooltip>
       )}
+      
     </Toolbar>
   );
 }
@@ -370,30 +231,70 @@ EnhancedTableToolbar.propTypes = {
 
 export default function EnhancedTable() {
   const [order, setOrder] = React.useState("asc");
-  const [orderBy, setOrderBy] = React.useState("calories");
+  const [orderBy, setOrderBy] = React.useState("orderId");
   const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(0);
   const [dense, setDense] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const [rows, setRows] = React.useState(initialRows);
 
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [selectedStatus, setSelectedStatus] = React.useState("");
+
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    const token = Cookies.get("token");
+
+    apiClient
+      .get(urls.sellerOrders.get, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(async (response) => {
+        await setRows(response.data.sellerOrders.orders);
+        setTotalOrders(response.data.sellerOrders.totalOrders);
+        setPendingOrders(response.data.sellerOrders.pendingOrders);
+        setTotalCustomers(response.data.sellerOrders.totalCustomers);
+        console.log(rows);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }, []);
 
   const handleStatusButtonClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleStatusMenuItemClick = (status) => {
-    const updatedRows = rows.map((row) => {
-      if (selected.includes(row.id)) {
-        return { ...row, status: status };
+    const updatedRows = rows?.map((row) => {
+      if (selected.includes(row.orderDetailsId)) {
+        const token = Cookies.get("token");
+        const body = {
+          orderDetailsId: row.orderDetailsId,
+          orderStatus: status,
+        };
+        apiClient
+          .patch(urls.sellerOrders.patch, body, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+          .then(async (response) => {
+            setRows(response.data.sellerOrders.orders);
+            console.log(response);
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       }
       return row;
     });
 
-    setRows(updatedRows);
-    console.log(updatedRows);
     setAnchorEl(null);
   };
 
@@ -405,7 +306,7 @@ export default function EnhancedTable() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = rows.map((n) => n.id);
+      const newSelected = rows?.map((n) => n.orderDetailsId);
       setSelected(newSelected);
       return;
     }
@@ -460,7 +361,7 @@ export default function EnhancedTable() {
 
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows?.length) : 0;
 
   const visibleRows = React.useMemo(
     () =>
@@ -468,7 +369,7 @@ export default function EnhancedTable() {
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
       ),
-    [order, orderBy, page, rowsPerPage]
+    [rows, order, orderBy, page, rowsPerPage]
   );
 
   return (
@@ -476,7 +377,11 @@ export default function EnhancedTable() {
       <Typography align="center" variant="h3" id="tableTitle" gutterBottom>
         Orders
       </Typography>
-      <SellsCard />
+      <SellsCard
+        totalOrders={totalOrders}
+        pendingOrders={pendingOrders}
+        totalCustomers={totalCustomers}
+      />
       <Paper sx={{ width: "100%", mb: 2 }}>
         <EnhancedTableToolbar numSelected={selected.length} />
         <TableContainer>
@@ -494,14 +399,14 @@ export default function EnhancedTable() {
               rowCount={rows.length}
             />
             <TableBody>
-              {visibleRows.map((row, index) => {
-                const isItemSelected = isSelected(row.id);
+              {visibleRows?.map((row, index) => {
+                const isItemSelected = isSelected(row.orderDetailsId);
                 const labelId = `enhanced-table-checkbox-${index}`;
 
                 return (
                   <TableRow
                     hover
-                    onClick={(event) => handleClick(event, row.id)}
+                    onClick={(event) => handleClick(event, row.orderDetailsId)}
                     role="checkbox"
                     aria-checked={isItemSelected}
                     tabIndex={-1}
@@ -529,7 +434,6 @@ export default function EnhancedTable() {
                     <TableCell align="left">{row.custName}</TableCell>
                     <TableCell align="left">{row.productName}</TableCell>
                     <TableCell align="left">{row.orderDate}</TableCell>
-                    <TableCell align="left">{row.modeOfPayment}</TableCell>
                     <TableCell align="left">{row.amount}</TableCell>
                     <TableCell align="left">{row.address}</TableCell>
                     <TableCell align="left">{row.email}</TableCell>
@@ -540,6 +444,7 @@ export default function EnhancedTable() {
                         aria-haspopup="true"
                         onClick={handleStatusButtonClick}
                         color="primary"
+                        sx={{ minWidth: "121px" }}
                       >
                         {row.status}
                       </Button>
@@ -550,17 +455,22 @@ export default function EnhancedTable() {
                         onClose={() => setAnchorEl(null)}
                       >
                         <MenuItem
-                          onClick={() => handleStatusMenuItemClick("Pending")}
-                        >
-                          Pending
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => handleStatusMenuItemClick("Shipped")}
+                          onClick={() =>
+                            handleStatusMenuItemClick(
+                              "Shipped",
+                              row.orderDetailsId
+                            )
+                          }
                         >
                           Shipped
                         </MenuItem>
                         <MenuItem
-                          onClick={() => handleStatusMenuItemClick("Delivered")}
+                          onClick={() =>
+                            handleStatusMenuItemClick(
+                              "Delivered",
+                              row.orderDetailsId
+                            )
+                          }
                         >
                           Delivered
                         </MenuItem>
@@ -584,7 +494,7 @@ export default function EnhancedTable() {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={rows.length}
+          count={rows?.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
