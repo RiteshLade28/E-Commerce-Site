@@ -171,7 +171,13 @@ EnhancedTableHead.propTypes = {
 };
 
 function EnhancedTableToolbar(props) {
-  const { numSelected } = props;
+  const {
+    numSelected,
+    handleStatusMenuItemClick,
+    anchorEl,
+    setAnchorEl,
+    handleStatusButtonClick,
+  } = props;
 
   return (
     <Toolbar
@@ -209,7 +215,13 @@ function EnhancedTableToolbar(props) {
 
       {numSelected > 0 ? (
         <Tooltip title="Update the status of selected">
-          <IconButton>
+          <IconButton
+            aria-controls="status-menu"
+            aria-haspopup="true"
+            onClick={handleStatusButtonClick}
+            color="primary"
+            sx={{ marginRight: "20px" }}
+          >
             <DoneAllIcon />
           </IconButton>
         </Tooltip>
@@ -220,13 +232,16 @@ function EnhancedTableToolbar(props) {
           </IconButton>
         </Tooltip>
       )}
-      
     </Toolbar>
   );
 }
 
 EnhancedTableToolbar.propTypes = {
   numSelected: PropTypes.number.isRequired,
+  handleStatusMenuItemClick: PropTypes.func.isRequired,
+  anchorEl: PropTypes.bool.isRequired,
+  setAnchorEl: PropTypes.func.isRequired,
+  handleStatusButtonClick: PropTypes.func.isRequired,
 };
 
 export default function EnhancedTable() {
@@ -383,7 +398,13 @@ export default function EnhancedTable() {
         totalCustomers={totalCustomers}
       />
       <Paper sx={{ width: "100%", mb: 2 }}>
-        <EnhancedTableToolbar numSelected={selected.length} />
+        <EnhancedTableToolbar
+          numSelected={selected.length}
+          handleStatusMenuItemClick={handleStatusMenuItemClick}
+          anchorEl={anchorEl}
+          setAnchorEl={setAnchorEl}
+          handleStatusButtonClick={handleStatusButtonClick}
+        />
         <TableContainer>
           <Table
             sx={{ minWidth: 750 }}
@@ -456,21 +477,18 @@ export default function EnhancedTable() {
                       >
                         <MenuItem
                           onClick={() =>
-                            handleStatusMenuItemClick(
-                              "Shipped",
-                              row.orderDetailsId
-                            )
+                            handleStatusMenuItemClick("Order Placed")
                           }
+                        >
+                          Order Placed
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => handleStatusMenuItemClick("Shipped")}
                         >
                           Shipped
                         </MenuItem>
                         <MenuItem
-                          onClick={() =>
-                            handleStatusMenuItemClick(
-                              "Delivered",
-                              row.orderDetailsId
-                            )
-                          }
+                          onClick={() => handleStatusMenuItemClick("Delivered")}
                         >
                           Delivered
                         </MenuItem>
