@@ -12,9 +12,11 @@ import urls from "../../apis/urls";
 import Cookies from "js-cookie";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import { useNavigate } from "react-router-dom";
 
 const ProductsPage = () => {
   const [allProducts, setAllProducts] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -49,7 +51,7 @@ const ProductsPage = () => {
       </Box>
       <Grid container spacing={2}>
         {allProducts?.map((product) => (
-          <Grid item key={product.id}>
+          <Grid item key={product.productId}>
             <Card sx={{ width: 215, height: 300, padding: "6px" }}>
               <CardMedia
                 sx={{
@@ -71,7 +73,7 @@ const ProductsPage = () => {
               </CardContent>
 
               <CardActions sx={{ justifyContent: "space-between" }}>
-                <IconButton aria-label="edit">
+                <IconButton aria-label="edit" onClick={() => navigate(`/seller/editProduct/${product.productId}`)}>
                   <EditIcon />
                 </IconButton>
                 <IconButton aria-label="delete">

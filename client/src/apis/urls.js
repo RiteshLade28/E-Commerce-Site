@@ -40,9 +40,14 @@ const urls = {
     patch: "/seller/orders/",
   },
   sellerProducts:{
-    get: "/seller/products/",
+    get: "/seller/products/?id={id}",
     add: "/seller/products/",
+    update: "/seller/products/?id={id}",
+  },
+  image:{
+    delete: "/seller/delProductImage/?id={id}&imageId={imageId}",
   }
+
 };
 
 export default urls;

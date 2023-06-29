@@ -1063,13 +1063,60 @@ def updateSellerOrders(current_user):
 @token_required
 def getSellerProducts(current_user):
     userId = current_user["userId"]
+    product_id = request.args.get('id')
+    print(product_id)
+    if product_id != "{id}":
+        try:
+            with sqlite3.connect("ecart.db") as conn:
+                cur = conn.cursor()
+
+                cur.execute(
+                    """
+                    SELECT c.categoryId, p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, p.stock, c.name FROM products as p JOIN sellers as s JOIN categories as c WHERE p.sellerId = s.sellerId and p.categoryId=c.categoryId and p.sellerId = ? and p.productId = ?;
+                    """, (userId, product_id,)
+                )   
+
+                product = cur.fetchone()
+                print(product)
+                product_obj = {
+                    "categoryId": product[0],
+                    "productId": product[1],
+                    "name": product[2],
+                    "newPrice": product[3],
+                    "oldPrice": product[4],
+                    "ratings": product[5],
+                    "description": product[6],
+                    "stock": product[7],
+                    "categoryName": product[8]
+                }
+
+                cur.execute(
+                    """
+                    SELECT productImageId, image FROM productImages WHERE productId = ?;
+                    """, (product_id,)
+                )
+
+                images = cur.fetchall()  
+                
+                
+                product_obj["images"] = images
+
+                return {
+                    "message": "Product retrieved successfully",
+                    "product": product_obj,
+                    "status_code": 200,
+                }
+
+        except Exception as e:
+            traceback.print_exc()
+            return {"message": "Error occurred: " + str(e), "status_code": 500}
     try:
         with sqlite3.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
                 """
-                SELECT c.categoryId, p.productId, p.name, p.price, p.ratings, p.description, p.stock, c.name FROM products as p JOIN sellers as s JOIN categories as c WHERE p.sellerId = s.sellerId and p.categoryId=c.categoryId and p.sellerId = ?;
+                SELECT c.categoryId, p.productId, p.name, p.newPrice, p.ratings, p.description, p.stock, c.name FROM products as p JOIN sellers as s JOIN categories as c WHERE p.sellerId = s.sellerId and p.categoryId=c.categoryId and p.sellerId = ?;
                 """, (userId,)
             )   
 
@@ -1124,7 +1171,7 @@ def addProduct(current_user):
 
         cur = conn.cursor()
         try:
-            cur.execute('''INSERT INTO products (sellerId ,name, price, ratings, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (userId ,product["itemName"], product["newPrice"], 0, product["categoryId"], product["description"], product["stock"]))
+            cur.execute('''INSERT INTO products (sellerId ,name, newPrice, oldPrice, ratings, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (userId ,product["itemName"], product["newPrice"], product["oldPrice"], 0, product["categoryId"], product["description"], product["stock"]))
 
             productId = cur.lastrowid
 
@@ -1145,6 +1192,82 @@ def addProduct(current_user):
     conn.close()
     return make_response(msg, status_code)
 
+
+@app.route(sellerRoute + '/products/<productId>', methods=["DELETE"])
+@token_required
+def deleteProduct(current_user, productId):
+    userId = current_user["userId"]
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute('''DELETE FROM products WHERE productId = ? and sellerId = ?''', (productId, userId))
+            msg = "Deleted successfully"
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    conn.close()
+    return make_response(msg, status_code)
+
+@app.route(sellerRoute + '/products/', methods=["PATCH"])
+@token_required
+def updateProduct(current_user):
+    userId = current_user["userId"]
+    product_id = request.args.get('id')
+    print("product_id", product_id)   
+    with sqlite3.connect('ecart.db') as conn:
+        product = request.get_json()
+        cur = conn.cursor()
+        try:
+            cur.execute('''UPDATE products SET name = ?, newPrice = ?, oldPrice = ?, categoryId = ?, description = ?, stock = ? WHERE productId = ? and sellerId = ?''', (product["itemName"], product["newPrice"], product["oldPrice"], product["categoryId"], product["description"], product["stock"], product_id, userId))
+            msg = "Updated successfully"
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    conn.close()
+    return make_response(msg, status_code)
+
+
+@app.route(sellerRoute + '/delProductImage/', methods=["OPTIONS"])
+def handleDeleteImageOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route(sellerRoute + '/delProductImage/', methods=["DELETE"])
+@token_required
+def deleteProductImage(current_user):
+    userId = current_user["userId"]
+    product_id = request.args.get('id')
+    image_id = request.args.get('imageId')
+    print("product_id", product_id)   
+    print("image_id", image_id)
+    with sqlite3.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute('''DELETE FROM productImages WHERE productId = ? and productImageId = ?''', (product_id, image_id))
+            msg = "Deleted successfully"
+            conn.commit()
+            status_code = 200
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    conn.close()
+    return make_response(msg, status_code)
 
 if __name__ == "__main__":
     app.run()
