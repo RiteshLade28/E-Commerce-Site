@@ -58,6 +58,7 @@ const ProductDesc = () => {
   const userId = Cookies.get("userId");
   const classes = useStyles();
   const navigate = useNavigate();
+  const [mainImage, setMainImage] = useState();
 
   const buyNow = (id) => {
     console.log(token, userId);
@@ -102,6 +103,7 @@ const ProductDesc = () => {
         setProduct(response.data[0]);
         setCategoryName(response.data[1]);
         setcategoryProducts(response.data[2]);
+        setMainImage(response.data[0].images[0]);
       })
       .catch((error) => {
         console.log(error);
@@ -147,7 +149,7 @@ const ProductDesc = () => {
           <Grid item lg={12} style={{ marginBottom: "20px" }}>
             <CardMedia
               component={"img"}
-              image={product["image"]}
+              image={mainImage}
               title="Product Image"
               style={{
                 objectFit: "contain",
@@ -202,33 +204,22 @@ const ProductDesc = () => {
         </Grid>
 
         <Grid item container lg={2} direction="column" spacing={2}>
-          <Grid item>
-            <CardMedia
-              component={"img"}
-              className={classes.image}
-              image={product["image"]}
-              title="Product Image"
-              style={{ objectFit: "contain", height: "150px", width: "150px" }}
-            />
-          </Grid>
-          <Grid item>
-            <CardMedia
-              component={"img"}
-              className={classes.image}
-              image={product["image"]}
-              title="Product Image"
-              style={{ objectFit: "contain", height: "150px", width: "150px" }}
-            />
-          </Grid>
-          <Grid item>
-            <CardMedia
-              component={"img"}
-              className={classes.image}
-              image={product["image"]}
-              title="Product Image"
-              style={{ objectFit: "contain", height: "150px", width: "150px" }}
-            />
-          </Grid>
+          {product["images"]?.map((image) => (
+            <Grid item>
+              <CardMedia
+                component={"img"}
+                className={classes.image}
+                image={image}
+                title="Product Image"
+                style={{
+                  objectFit: "contain",
+                  height: "120px",
+                  width: "120px",
+                }}
+                onClick={() => setMainImage(image)}
+              />
+            </Grid>
+          ))}
         </Grid>
         <Grid item lg={4} className={classes.details}>
           <Typography variant="h3" style={{ marginBottom: "20px" }}>

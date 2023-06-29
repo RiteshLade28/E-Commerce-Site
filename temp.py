@@ -9,11 +9,18 @@ cursor = conn.cursor()
 
 # Execute your query
 
+
+
 cursor.execute(
                 """
-                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || ', ' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus FROM users as u JOIN orders AS o JOIN orderDetails AS od JOIN products as p WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?;
-                """, (2,)
+                select * from orderDetails;
+                """
             )
+# cursor.execute(
+#                 """
+#                 SELECT name from products where sellerId = ?;
+#                 """, (1,)
+#             )
 
 # Fetch the column names
 column_names = [description[0] for description in cursor.description]

@@ -96,7 +96,7 @@ export default function Review() {
             </ListItem>
             <ListItemAvatar>
               <img
-                src={product.image}
+                src={product.images[0]}
                 alt="Product"
                 style={{
                   width: "300px",

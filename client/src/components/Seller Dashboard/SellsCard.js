@@ -32,6 +32,7 @@ export default function DataTable({
   totalOrders,
   pendingOrders,
   totalCustomers,
+  newOrders,
 }) {
   const classes = useStyles();
 
@@ -71,7 +72,7 @@ export default function DataTable({
               <Typography variant="h6" gutterBottom>
                 New Orders
               </Typography>
-              <Typography variant="h4">30</Typography>
+              <Typography variant="h4">{newOrders}</Typography>
             </CardContent>
           </Card>
         </Grid>

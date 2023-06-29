@@ -154,51 +154,85 @@ def getProducts():
     if productId:
         with sqlite3.connect('ecart.db') as conn:
             cur = conn.cursor()
-            cur.execute('SELECT p.productId, p.name, p.price, p.ratings, p.image, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
+            cur.execute('SELECT p.productId, p.name, p.price, p.ratings, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
             itemData = cur.fetchall()
 
-        if itemData:
-            productId, name, price, ratings, image, description, categoryId, categoryName = itemData[0]
-            product = {
-                'productId': productId,
-                'categoryId': categoryId,
-                'categoryName': categoryName,
-                'name': name,
-                'price': price,
-                'ratings': ratings,
-                'image': image,
-                'description': description
-            }
+            if itemData:
+                productId, name, price, ratings, description, categoryId, categoryName = itemData[0]
+                print(productId)
+                cur.execute(
+                    """
+                    SELECT image FROM productImages WHERE productId = ?;
+                    """, (productId,)
+                )
             
-            cur.execute('SELECT productId, name, price, image, categoryId FROM products where categoryId = ?', (categoryId,))
-            categoryData = cur.fetchall()
-            relatedProducts = []
-            relatedProductsCnt = 0
-            for item in categoryData:
-                relatedProductsCnt +=1
-                productId, name, price, image, categoryId = item
-                relatedProducts.append({
+                images = cur.fetchall()  # Retrieve all images for the current product
+                    
+                image_list = []
+                for image in images:
+                    image_list.append(image[0])
+
+                product = {
                     'productId': productId,
                     'categoryId': categoryId,
+                    'categoryName': categoryName,
                     'name': name,
                     'price': price,
-                    'image': image
-                })
+                    'ratings': ratings,
+                    'description': description,
+                    "images": image_list, 
+                }
+                
+                cur.execute(
+                    """
+                    SELECT p.productId, p.name, p.price, p.categoryId, i.image
+                    FROM products p
+                    JOIN (
+                        SELECT productId, image
+                        FROM productImages
+                        GROUP BY productId
+                    ) i ON p.productId = i.productId
+                    WHERE categoryId = ?
+                    """, (categoryId,)
+                )
+                categoryData = cur.fetchall()
+                relatedProducts = []
+                relatedProductsCnt = 0
+                for item in categoryData:
+                    relatedProductsCnt +=1
+                    productId, name, price, categoryId, image = item
+                    relatedProducts.append({
+                        'productId': productId,
+                        'categoryId': categoryId,
+                        'name': name,
+                        'price': price,
+                        'image': image
+                    })
 
-            # print(categoryData)
+                # print(categoryData)
 
-            
+                
 
-            return jsonify([product, categoryName, relatedProducts])
+                return jsonify([product, categoryName, relatedProducts])
 
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
-        cur.execute('SELECT p.productId, p.name, p.price, p.image, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId')
+        cur.execute('SELECT p.productId, p.name, p.price, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId ')
         itemData = cur.fetchall()
+
+        
 
     categoryData = {}
     for item in itemData:
-        productId, name, price, image, categoryId, categoryName = item
+        productId, name, price, categoryId, categoryName = item
+        cur.execute(
+            """
+            SELECT image FROM productImages WHERE productId = ?;
+            """, (productId,)
+        )
+            
+        image = cur.fetchall()[0][0]  # Retrieve the first image for the current product
+
         if categoryId not in categoryData:
             categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
         categoryData[categoryId]['products'].append({
@@ -220,30 +254,6 @@ def getProducts():
     return jsonify(formattedData)
 
 
-@app.route(route + '/products/', methods=["POST"])
-@token_required
-def addProduct(current_user):
-    new_quantity = request.headers.get('quantity')
-    with sqlite3.connect('ecart.db') as conn:
-        product = request.get_json()
-        print(product["itemName"])
-        cur = conn.cursor()
-        try:
-            # If the product doesn't exist, add a new entry with quantity 1
-            cur.execute('''INSERT INTO products (name, price, image, ratings, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (product["itemName"], product["price"], product["image"], product["ratings"], product["categoryId"], product["description"], product["stock"]))
-            msg = "Added successfully"
-            conn.commit()
-            status_code = 200
-        except:
-            conn.rollback()
-            msg = "Error occurred"
-            status_code = 500
-            traceback.print_exc()  # Print the traceback for debugging purposes
-
-    conn.close()
-    return make_response(msg, status_code)
-
-
 @app.route(route + "/cartItems/", methods=["OPTIONS"])
 def handleCartItemsOptions():
     response = jsonify({})
@@ -258,7 +268,15 @@ def cartItems(current_user):
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity FROM users, products, kart, categories WHERE users.userId = ? AND users.userId = kart.userId AND products.productId = kart.productId AND products.categoryId = categories.categoryId",
+            """
+            SELECT products.productId, products.name, products.price, productImages.image, categories.name, kart.quantity
+            FROM users, products, kart, categories, productImages
+            WHERE users.userId = ? AND users.userId = kart.userId
+                AND products.productId = kart.productId
+                AND products.categoryId = categories.categoryId
+                AND products.productId = productImages.productId
+            LIMIT 1
+            """,
             (userId,),
         )
         products = cur.fetchall()
@@ -382,11 +400,11 @@ def updateQuantity(current_user):
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
-            cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId))
+            cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId,))
             msg = "Quantity updated successfully"
             conn.commit()
             cur.execute(
-                '''SELECT products.productId, products.name, products.price, products.image, categories.name, kart.quantity 
+                '''SELECT products.productId, products.name, products.price, categories.name, kart.quantity 
                    FROM products
                    JOIN kart ON kart.productId = products.productId
                    JOIN categories ON products.categoryId = categories.categoryId
@@ -430,7 +448,7 @@ def placeOrder(current_user):
             # Fetch the product price
             cur.execute("SELECT * FROM products WHERE productId = ?", (productId,))
             product = cur.fetchone()
-            price = product[2]
+            price = product[3]
             print("price " + str(price))
             # Insert into payments table
             cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
@@ -553,37 +571,40 @@ def getOrders(current_user):
 
                 cur.execute(
                     """
-                    SELECT products.productId, products.name, products.description, products.price, products.image, categories.name
+                    SELECT products.productId, products.name, products.description, products.price, categories.name, productImages.image
                     FROM products
                     JOIN categories ON products.categoryId = categories.categoryId
+                    JOIN productImages ON products.productId = productImages.productId
                     WHERE products.productId = ?
                     """,
                     (productId,),
                 )
 
                 product = cur.fetchone()
-                (
-                    productId,
-                    productName,
-                    productDescription,
-                    productPrice,
-                    productImage,
-                    categoryName,
-                ) = product
 
-                orderItem = {
-                    "orderId": orderId,
-                    "title": productName,
-                    "quantity": quantity,
-                    "price": productPrice,
-                    "image": productImage,
-                    "shipping": address,
-                    "payment": "Credit Card",  # Replace with appropriate payment method
-                    "status": "Delivered",  # Replace with appropriate order status
-                    "deliveryDate": orderDate,
-                }
+                if product is not None:
+                    (
+                        productId,
+                        productName,
+                        productDescription,
+                        productPrice,
+                        categoryName,
+                        productImage,
+                    ) = product
 
-                orderedProducts.append(orderItem)
+                    orderItem = {
+                        "orderId": orderId,
+                        "title": productName,
+                        "quantity": quantity,
+                        "price": productPrice,
+                        "shipping": address,
+                        "image": productImage,
+                        "payment": "Credit Card",  # Replace with appropriate payment method
+                        "status": "Delivered",  # Replace with appropriate order status
+                        "deliveryDate": orderDate,
+                    }
+
+                    orderedProducts.append(orderItem)
 
             formattedOrderedProducts = []
             for orderId, group in itertools.groupby(orderedProducts, key=lambda x: x["orderId"]):
@@ -604,6 +625,7 @@ def getOrders(current_user):
     except Exception as e:
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
+
 
 @app.route(route + "/categories/", methods=["OPTIONS"])
 def handleCategoriesOptions():
@@ -799,7 +821,11 @@ def getSellerDashboard(current_user):
 
             cur.execute(
                 """
-                select name, image from products where sellerId = ?;
+                SELECT p.name, i.image as image
+                FROM products p
+                JOIN productImages i ON p.productId = i.productId
+                WHERE p.sellerId = ?
+                GROUP BY p.productId;
                 """, (userId,)
             )
             
@@ -814,6 +840,7 @@ def getSellerDashboard(current_user):
 
             orders = cur.fetchall()
 
+            
 
             months = {
                     '01': 'Jan',
@@ -858,6 +885,7 @@ def getSellerDashboard(current_user):
             )
 
             result = cur.fetchall()
+            
 
             product_counts = [{'name': row[0], 'value': row[1]} for row in result]
 
@@ -873,7 +901,7 @@ def getSellerDashboard(current_user):
                     "latestProducts": latestProducts,
                     "orders": orders,
                     "salesData": sales_data,
-                    "productCounts": product_counts
+                    "productCounts": product_counts,
                 },
             }
 
@@ -919,7 +947,27 @@ def getSellerOrders(current_user):
                 """, (userId,)
             )
 
+
             orders = cur.fetchall()
+
+            # today = datetime.date.today()
+            cur.execute(
+                """
+                SELECT COUNT(*) AS orderCount
+                FROM users AS u
+                JOIN orders AS o
+                JOIN orderDetails AS od
+                JOIN products AS p
+                WHERE o.orderId = od.orderId
+                    AND u.userId = o.userId
+                    AND od.productId = p.productId
+                    AND p.sellerId = ?
+                    AND DATE(od.orderDate) = CURRENT_DATE;
+                """, (userId,)
+            )
+            
+            todaysOrders = cur.fetchone()
+
             order_objects = []
 
             for order in orders:
@@ -944,6 +992,7 @@ def getSellerOrders(current_user):
                     "pendingOrders": pendingOrders,
                     "totalCustomers": totalCustomers,
                     "orders": order_objects,
+                    "newOrders": todaysOrders,
                 },
                 "status_code": 200,
             }
@@ -1008,6 +1057,93 @@ def updateSellerOrders(current_user):
     except Exception as e:
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+
+@app.route(sellerRoute + "/products/", methods=["GET"])
+@token_required
+def getSellerProducts(current_user):
+    userId = current_user["userId"]
+    try:
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                SELECT c.categoryId, p.productId, p.name, p.price, p.ratings, p.description, p.stock, c.name FROM products as p JOIN sellers as s JOIN categories as c WHERE p.sellerId = s.sellerId and p.categoryId=c.categoryId and p.sellerId = ?;
+                """, (userId,)
+            )   
+
+            products = cur.fetchall()
+            product_objects = []
+
+            for product in products:
+                print(product[1])
+                cur.execute(
+                    """
+                    SELECT image FROM productImages WHERE productId = ?;
+                    """, (product[1],)
+                )
+
+                images = cur.fetchall()  
+                
+                image = images[0][0] if images else None
+                product_obj = {
+                    "categoryId": product[0],
+                    "productId": product[1],
+                    "name": product[2],
+                    "price": product[3],
+                    "ratings": product[4],
+                    "description": product[5],
+                    "stock": product[6],
+                    "categoryName": product[7],
+                    "image": image,
+                }
+                
+                product_objects.append(product_obj)
+
+            return {
+                "message": "Products retrieved successfully",
+                "sellerProducts": {
+                    "products": product_objects,
+                },
+                "status_code": 200,
+            }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+
+@app.route(sellerRoute + '/products/', methods=["POST"])
+@token_required
+def addProduct(current_user):
+    userId = current_user["userId"]
+    new_quantity = request.headers.get('quantity')
+    with sqlite3.connect('ecart.db') as conn:
+        product = request.get_json()
+        # print(product["images"])
+
+        cur = conn.cursor()
+        try:
+            cur.execute('''INSERT INTO products (sellerId ,name, price, ratings, categoryId, description, stock) VALUES (?, ?, ?, ?, ?, ?, ?)''', (userId ,product["itemName"], product["newPrice"], 0, product["categoryId"], product["description"], product["stock"]))
+
+            productId = cur.lastrowid
+
+            for i in range(len(product["images"])):
+                cur.execute('''Insert into productImages (productId, image) values (?, ?)''', (productId, product["images"][i]))
+           
+            msg = "Added successfully"
+            conn.commit()
+            status_code = 200
+
+                
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()  # Print the traceback for debugging purposes
+
+    conn.close()
+    return make_response(msg, status_code)
 
 
 if __name__ == "__main__":

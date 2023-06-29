@@ -9,6 +9,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  CardMedia,
 } from "@material-ui/core";
 import {
   LineChart,
@@ -378,9 +379,14 @@ const Dashboard = () => {
               >
                 <CardHeader
                   avatar={
-                    <Avatar
-                      sx={{ bgcolor: red[500] }}
-                      aria-label={product[0]}
+                    <CardMedia
+                      style={{
+                        objectFit: "contain",
+                        width: "60px",
+                        height: "60px",
+                      }}
+                      component="img"
+                      alt={product[0]}
                       src={product[1]}
                     />
                   }

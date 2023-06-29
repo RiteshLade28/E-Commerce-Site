@@ -39,6 +39,10 @@ const urls = {
     get: "/seller/orders/",
     patch: "/seller/orders/",
   },
+  sellerProducts:{
+    get: "/seller/products/",
+    add: "/seller/products/",
+  }
 };
 
 export default urls;

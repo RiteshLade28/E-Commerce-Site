@@ -18,6 +18,7 @@ import Dashboard from "./components/Seller Dashboard/Dashboard";
 import SellerNavbar from "./components/Seller Dashboard/Navbar.js";
 import Products from "./components/Seller Dashboard/Products.js";
 import SellerOrders from "./components/Seller Dashboard/Orders.js";
+import AddProduct from "./components/Seller Dashboard/AddProduct";
 
 function App() {
   const location = useLocation();
@@ -56,6 +57,7 @@ function App() {
         <Route element={<Dashboard />} path="/seller/dashboard" />
         <Route element={<Products />} path="/seller/products" />
         <Route element={<SellerOrders />} path="/seller/orders" />
+        <Route element={<AddProduct  />} path="/seller/addProduct" />
       </Routes>
 
       {shouldShowNavBarAndFooter && <Footer />}

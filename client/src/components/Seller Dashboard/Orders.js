@@ -214,17 +214,35 @@ function EnhancedTableToolbar(props) {
       )}
 
       {numSelected > 0 ? (
-        <Tooltip title="Update the status of selected">
-          <IconButton
-            aria-controls="status-menu"
-            aria-haspopup="true"
-            onClick={handleStatusButtonClick}
-            color="primary"
-            sx={{ marginRight: "20px" }}
+        <>
+          <Tooltip title="Update the status of selected">
+            <IconButton
+              aria-controls="status-menu"
+              aria-haspopup="true"
+              onClick={handleStatusButtonClick}
+              color="primary"
+              sx={{ marginRight: "20px" }}
+            >
+              <DoneAllIcon />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            id="status-menu"
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
           >
-            <DoneAllIcon />
-          </IconButton>
-        </Tooltip>
+            <MenuItem onClick={() => handleStatusMenuItemClick("Order Placed")}>
+              Order Placed
+            </MenuItem>
+            <MenuItem onClick={() => handleStatusMenuItemClick("Shipped")}>
+              Shipped
+            </MenuItem>
+            <MenuItem onClick={() => handleStatusMenuItemClick("Delivered")}>
+              Delivered
+            </MenuItem>
+          </Menu>
+        </>
       ) : (
         <Tooltip title="Filter list">
           <IconButton>
@@ -258,6 +276,7 @@ export default function EnhancedTable() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
+  const [newOrders, setNewOrders] = useState(0);
 
   const [rows, setRows] = useState([]);
   useEffect(() => {
@@ -274,6 +293,7 @@ export default function EnhancedTable() {
         setTotalOrders(response.data.sellerOrders.totalOrders);
         setPendingOrders(response.data.sellerOrders.pendingOrders);
         setTotalCustomers(response.data.sellerOrders.totalCustomers);
+        setNewOrders(response.data.sellerOrders.newOrders);
         console.log(rows);
       })
       .catch((error) => {
@@ -387,6 +407,16 @@ export default function EnhancedTable() {
     [rows, order, orderBy, page, rowsPerPage]
   );
 
+  const formatDate = (date) => {
+    console.log(date);
+    const originalDate = new Date(date);
+    const day = originalDate.getDate();
+    const month = originalDate.getMonth() + 1; // Months are zero-indexed
+    const year = originalDate.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    return formattedDate;
+  };
+
   return (
     <Box sx={{ width: "1390px", margin: "100px" }}>
       <Typography align="center" variant="h3" id="tableTitle" gutterBottom>
@@ -396,6 +426,7 @@ export default function EnhancedTable() {
         totalOrders={totalOrders}
         pendingOrders={pendingOrders}
         totalCustomers={totalCustomers}
+        newOrders={newOrders}
       />
       <Paper sx={{ width: "100%", mb: 2 }}>
         <EnhancedTableToolbar
@@ -433,7 +464,9 @@ export default function EnhancedTable() {
                     tabIndex={-1}
                     key={row.id}
                     selected={isItemSelected}
-                    sx={{ cursor: "pointer" }}
+                    sx={{
+                      cursor: "pointer",
+                    }}
                   >
                     <TableCell padding="checkbox">
                       <Checkbox
@@ -454,45 +487,27 @@ export default function EnhancedTable() {
                     </TableCell>
                     <TableCell align="left">{row.custName}</TableCell>
                     <TableCell align="left">{row.productName}</TableCell>
-                    <TableCell align="left">{row.orderDate}</TableCell>
+                    <TableCell align="left">
+                      {formatDate(row.orderDate)}
+                    </TableCell>
                     <TableCell align="left">{row.amount}</TableCell>
                     <TableCell align="left">{row.address}</TableCell>
                     <TableCell align="left">{row.email}</TableCell>
 
-                    <TableCell align="left">
-                      <Button
-                        aria-controls="status-menu"
-                        aria-haspopup="true"
-                        onClick={handleStatusButtonClick}
-                        color="primary"
-                        sx={{ minWidth: "121px" }}
-                      >
-                        {row.status}
-                      </Button>
-                      <Menu
-                        id="status-menu"
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl)}
-                        onClose={() => setAnchorEl(null)}
-                      >
-                        <MenuItem
-                          onClick={() =>
-                            handleStatusMenuItemClick("Order Placed")
-                          }
-                        >
-                          Order Placed
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => handleStatusMenuItemClick("Shipped")}
-                        >
-                          Shipped
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => handleStatusMenuItemClick("Delivered")}
-                        >
-                          Delivered
-                        </MenuItem>
-                      </Menu>
+                    <TableCell
+                      align="left"
+                      width={"150px"}
+                      sx={{
+                        fontWeight: "bold",
+                        color:
+                          row.status === "Delivered"
+                            ? "green"
+                            : row.status === "Shipped"
+                            ? "orange"
+                            : "red",
+                      }}
+                    >
+                      {row.status}
                     </TableCell>
                   </TableRow>
                 );
