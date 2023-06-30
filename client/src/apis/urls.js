@@ -43,10 +43,9 @@ const urls = {
     get: "/seller/products/?id={id}",
     add: "/seller/products/",
     update: "/seller/products/?id={id}",
+    delete: "/seller/products/?id={id}",
   },
-  image:{
-    delete: "/seller/delProductImage/?id={id}&imageId={imageId}",
-  }
+
 
 };
 

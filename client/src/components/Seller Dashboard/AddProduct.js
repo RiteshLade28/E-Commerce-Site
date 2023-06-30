@@ -35,7 +35,7 @@ export default function AddProduct() {
   const navigate = new useNavigate();
 
   const [categories, setCategories] = useState([]);
-  const [sellItem, setSellItem] = useState();
+  const [sellItem, setSellItem] = useState(1);
 
   const [name, setName] = useState("");
   const [oldPrice, setOldPrice] = useState("");
@@ -46,6 +46,7 @@ export default function AddProduct() {
 
   const [images, setImages] = useState([]);
   const [isButtonMoved, setIsButtonMoved] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleImageUpload = (event) => {
     const fileList = event.target.files;
@@ -85,12 +86,23 @@ export default function AddProduct() {
       .catch((error) => {
         console.log(error);
       });
-  }, []);
+  }, [isSuccess]);
+
+  useEffect(() => {
+    if (categories.length > 0) {
+      setSellItem(categories[0].id);
+    }
+  }, [categories]);
 
   const handleAddProduct = (e) => {
     e.preventDefault();
     const token = Cookies.get("token");
     console.log(token);
+    if (images.length === 0) {
+      toast.error("Please add at least 1 image");
+      return;
+    }
+    const prevCategory = sellItem;
     apiClient
       .post(
         urls.sellerProducts.add,
@@ -120,7 +132,8 @@ export default function AddProduct() {
         setDescription("");
         setStock("");
         setDiscount("");
-        setSellItem("");
+        setSellItem(prevCategory);
+        setIsSuccess(!isSuccess);
       })
       .catch((error) => {
         console.log(error);

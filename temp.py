@@ -13,8 +13,8 @@ cursor = conn.cursor()
 
 cursor.execute(
                 """
-                select * from orderDetails;
-                """
+                SELECT c.categoryId, p.productId, p.name, p.newPrice, p.ratings, p.description, p.stock, c.name FROM products as p JOIN sellers as s JOIN categories as c WHERE p.sellerId = s.sellerId and p.categoryId=c.categoryId and p.sellerId = ?;
+                """, (1,)
             )
 # cursor.execute(
 #                 """

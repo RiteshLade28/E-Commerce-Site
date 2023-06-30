@@ -13,9 +13,12 @@ import Cookies from "js-cookie";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ProductsPage = () => {
   const [allProducts, setAllProducts] = useState([]);
+  const [isdeleted, setIsDeleted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,7 +37,29 @@ const ProductsPage = () => {
       .catch((error) => {
         console.log(error);
       });
-  }, []);
+  }, [isdeleted]);
+
+  const handleDeleteProduct = (productId) => {
+    const token = Cookies.get("token");
+    apiClient
+      .delete(urls.sellerProducts.delete.replace("{id}", productId), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          productId: productId,
+        },
+      })
+      .then((response) => {
+        console.log(response);
+        setIsDeleted(!isdeleted);
+        toast.success("Product deleted successfully");
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+
   return (
     <Paper style={{ margin: "85px 20px 100px 85px", padding: "20px" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -73,10 +98,18 @@ const ProductsPage = () => {
               </CardContent>
 
               <CardActions sx={{ justifyContent: "space-between" }}>
-                <IconButton aria-label="edit" onClick={() => navigate(`/seller/editProduct/${product.productId}`)}>
+                <IconButton
+                  aria-label="edit"
+                  onClick={() =>
+                    navigate(`/seller/editProduct/${product.productId}`)
+                  }
+                >
                   <EditIcon />
                 </IconButton>
-                <IconButton aria-label="delete">
+                <IconButton
+                  aria-label="delete"
+                  onClick={() => handleDeleteProduct(product.productId)}
+                >
                   <DeleteIcon />
                 </IconButton>
               </CardActions>
@@ -84,6 +117,7 @@ const ProductsPage = () => {
           </Grid>
         ))}
       </Grid>
+      <ToastContainer />
     </Paper>
   );
 };

@@ -1,24 +1,14 @@
 import React, { useEffect, useState } from "react";
-import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
-import { useNavigate } from "react-router-dom";
-import wallpaper from "../../images/wallpaper.jpg";
-import bcrypt from "bcryptjs";
 import Cookies from "js-cookie";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { IconButton } from "@mui/material";
@@ -46,7 +36,6 @@ export default function AddProduct() {
 
   const [images, setImages] = useState([]);
   const [isButtonMoved, setIsButtonMoved] = useState(false);
-  const [isImageDeleted, setIsImageDeleted] = useState(false);
 
   const handleImageUpload = (event) => {
     const fileList = event.target.files;
@@ -71,23 +60,6 @@ export default function AddProduct() {
     const updatedImages = [...images];
     updatedImages.splice(index, 1);
     setImages(updatedImages);
-    const token = Cookies.get("token");
-    const id = new URL(window.location.href).pathname.split("/")[3];
-
-    apiClient
-      .delete(urls.image.delete.replace("{id}", id).replace("{imageId}", index), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          productId: id,
-        },
-      })
-      .then((response) => {
-        console.log(response);
-        setIsImageDeleted(true);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
   };
 
   useEffect(() => {
@@ -115,7 +87,17 @@ export default function AddProduct() {
       .catch((error) => {
         console.log(error);
       });
-  }, [isImageDeleted]);
+
+    apiClient
+      .get(urls.category.get)
+      .then((response) => {
+        console.log(response.data.categories);
+        setCategories(response.data.categories);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }, []);
 
   const handleEditProduct = (e) => {
     e.preventDefault();
@@ -151,7 +133,6 @@ export default function AddProduct() {
         setDescription("");
         setStock("");
         setDiscount("");
-        setSellItem("");
       })
       .catch((error) => {
         console.log(error);
@@ -201,7 +182,7 @@ export default function AddProduct() {
                 }}
               >
                 <img
-                  src={image[1]}
+                  src={image}
                   alt={`Uploaded ${index + 1}`}
                   style={{
                     width: "125px",
@@ -214,7 +195,7 @@ export default function AddProduct() {
                   variant="outlined"
                   color="primary"
                   size="small"
-                  onClick={() => handleImageDelete(image[0])}
+                  onClick={() => handleImageDelete(index)}
                 >
                   <DeleteIcon />
                 </IconButton>
@@ -289,7 +270,10 @@ export default function AddProduct() {
                         <Select
                           labelId="sellItem"
                           id="sellItem"
-                          value={sellItem}
+                          value={
+                            sellItem ||
+                            (categories.length > 0 ? categories[0].id : "")
+                          }
                           label="Category"
                           onChange={(e) => {
                             setSellItem(e.target.value);

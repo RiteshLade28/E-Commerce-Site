@@ -789,7 +789,7 @@ def getSellerDashboard(current_user):
 
             cur.execute(
                 """
-                select sum(p.price) from users as u join orders as o join orderDetails as od join products as p where o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?
+                select sum(p.newPrice) from users as u join orders as o join orderDetails as od join products as p where o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = ?
                 """, (userId,)
                 )
 
@@ -860,7 +860,7 @@ def getSellerDashboard(current_user):
 
             for month_number, month_name in months.items():
                 query = """
-                    SELECT SUM(p.price) AS totalSales
+                    SELECT SUM(p.newPrice) AS totalSales
                     FROM orders AS o
                     JOIN orderDetails AS od ON o.orderId = od.orderId
                     JOIN products AS p ON od.productId = p.productId
@@ -880,7 +880,7 @@ def getSellerDashboard(current_user):
                 SELECT p.name, count(p.productId)
                 FROM orders as o JOIN orderDetails as od JOIN products as p 
                 ON o.orderId = od.orderId and od.productId = p.productId
-                WHERE p.sellerId = ? group by p.price   
+                WHERE p.sellerId = ? group by p.newPrice   
                 """, (userId,)
             )
 
@@ -1078,6 +1078,20 @@ def getSellerProducts(current_user):
 
                 product = cur.fetchone()
                 print(product)
+
+                cur.execute(
+                    """
+                    SELECT image FROM productImages WHERE productId = ?;
+                    """, (product_id,)
+                )
+
+                images = cur.fetchall()
+                imageArray = []
+                for image in images:
+                    image = image[0] 
+                    imageArray.append(image)
+
+
                 product_obj = {
                     "categoryId": product[0],
                     "productId": product[1],
@@ -1087,19 +1101,10 @@ def getSellerProducts(current_user):
                     "ratings": product[5],
                     "description": product[6],
                     "stock": product[7],
-                    "categoryName": product[8]
+                    "categoryName": product[8],
+                    "images": imageArray,
                 }
-
-                cur.execute(
-                    """
-                    SELECT productImageId, image FROM productImages WHERE productId = ?;
-                    """, (product_id,)
-                )
-
-                images = cur.fetchall()  
                 
-                
-                product_obj["images"] = images
 
                 return {
                     "message": "Product retrieved successfully",
@@ -1176,7 +1181,7 @@ def addProduct(current_user):
             productId = cur.lastrowid
 
             for i in range(len(product["images"])):
-                cur.execute('''Insert into productImages (productId, image) values (?, ?)''', (productId, product["images"][i]))
+                cur.execute('''Insert into productImages (productId, image) values (?, ?)''', (productId, product["images"][i]))    
            
             msg = "Added successfully"
             conn.commit()
@@ -1192,15 +1197,16 @@ def addProduct(current_user):
     conn.close()
     return make_response(msg, status_code)
 
-
-@app.route(sellerRoute + '/products/<productId>', methods=["DELETE"])
+@app.route(sellerRoute + '/products/', methods=["DELETE"])
 @token_required
-def deleteProduct(current_user, productId):
+def deleteProduct(current_user):
     userId = current_user["userId"]
+    productId = request.args.get('id')
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute('''DELETE FROM products WHERE productId = ? and sellerId = ?''', (productId, userId))
+            cur.execute('''DELETE FROM productImages WHERE productId = ?''', (productId,))
             msg = "Deleted successfully"
             conn.commit()
             status_code = 200
@@ -1218,12 +1224,16 @@ def deleteProduct(current_user, productId):
 def updateProduct(current_user):
     userId = current_user["userId"]
     product_id = request.args.get('id')
-    print("product_id", product_id)   
     with sqlite3.connect('ecart.db') as conn:
         product = request.get_json()
         cur = conn.cursor()
         try:
             cur.execute('''UPDATE products SET name = ?, newPrice = ?, oldPrice = ?, categoryId = ?, description = ?, stock = ? WHERE productId = ? and sellerId = ?''', (product["itemName"], product["newPrice"], product["oldPrice"], product["categoryId"], product["description"], product["stock"], product_id, userId))
+
+            
+            cur.execute("DELETE FROM productImages WHERE productId = ?", (product_id,))
+            for image in product["images"]:
+                cur.execute("INSERT INTO productImages (productId, image) VALUES (?, ?)", (product_id, image))
             msg = "Updated successfully"
             conn.commit()
             status_code = 200
@@ -1236,38 +1246,6 @@ def updateProduct(current_user):
     conn.close()
     return make_response(msg, status_code)
 
-
-@app.route(sellerRoute + '/delProductImage/', methods=["OPTIONS"])
-def handleDeleteImageOptions():
-    response = jsonify({})
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    return response
-
-
-@app.route(sellerRoute + '/delProductImage/', methods=["DELETE"])
-@token_required
-def deleteProductImage(current_user):
-    userId = current_user["userId"]
-    product_id = request.args.get('id')
-    image_id = request.args.get('imageId')
-    print("product_id", product_id)   
-    print("image_id", image_id)
-    with sqlite3.connect('ecart.db') as conn:
-        cur = conn.cursor()
-        try:
-            cur.execute('''DELETE FROM productImages WHERE productId = ? and productImageId = ?''', (product_id, image_id))
-            msg = "Deleted successfully"
-            conn.commit()
-            status_code = 200
-        except:
-            conn.rollback()
-            msg = "Error occurred"
-            status_code = 500
-            traceback.print_exc()
-
-    conn.close()
-    return make_response(msg, status_code)
 
 if __name__ == "__main__":
     app.run()
