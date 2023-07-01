@@ -60,7 +60,7 @@ function App() {
         <Route element={<SellerOrders />} path="/seller/orders" />
         <Route element={<AddProduct  />} path="/seller/addProduct" />
         <Route element={<EditProduct />} path="/seller/editProduct/:productId" />
-      </Routes>
+      </Routes> 
 
       {shouldShowNavBarAndFooter && <Footer />}
     </Store>

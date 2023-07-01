@@ -91,12 +91,12 @@ export default function Review() {
         {products?.map((product) => (
           <React.Fragment key={product.name}>
             <ListItem sx={{ py: 1, px: 0 }}>
-              <ListItemText primary="Category" secondary={product.desc} />
-              <Typography variant="body2">{product.category}</Typography>
+              <ListItemText primary="Category" />
+              <Typography variant="body2">{product.categoryName}</Typography>
             </ListItem>
             <ListItemAvatar>
               <img
-                src={product.images[0]}
+                src={product.image}
                 alt="Product"
                 style={{
                   width: "300px",
@@ -106,10 +106,7 @@ export default function Review() {
               />
             </ListItemAvatar>
             <ListItem sx={{ py: 1, px: 0 }}>
-              <ListItemText
-                primary={product.name + " Price"}
-                secondary={product.desc}
-              />
+              <ListItemText primary={product.name + " Price"} />
               <Typography variant="body2">₹{product.price}</Typography>
             </ListItem>
             <ListItem sx={{ py: 1, px: 0 }}>
@@ -132,7 +129,7 @@ export default function Review() {
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             {url && url !== "cart"
               ? products && products[0]
-                ? `₹${products[0].price}`
+                ? `₹${products[0].newPrice}`
                 : ""
               : `₹${totalPrice}`}
           </Typography>

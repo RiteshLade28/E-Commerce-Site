@@ -8,7 +8,7 @@ import React, { useEffect, useState, useContext } from "react";
 import apiClient from "../../apis/api-client";
 import urls from "../../apis/urls";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Typography } from "@mui/material";
+import { Box, Icon, Typography } from "@mui/material";
 import Grid from "@material-ui/core/Grid";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
@@ -26,6 +26,9 @@ import Store, { IdContext } from "../BuyNow/Store";
 import { Divider } from "@mui/material";
 import Rating from "@mui/material/Rating";
 import TextField from "@mui/material/TextField";
+import { IconButton } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -63,7 +66,10 @@ const ProductDesc = () => {
   const navigate = useNavigate();
   const [mainImage, setMainImage] = useState();
   const [ratings, setRatings] = useState(3);
-  const [review, setReview] = useState("");
+  const [userRating, setUserRating] = useState(1);
+  const [userReview, setUserReview] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [isUserReview, setIsUserReview] = useState(false);
 
   const buyNow = (id) => {
     console.log(token, userId);
@@ -96,14 +102,13 @@ const ProductDesc = () => {
     e.preventDefault();
     const token = Cookies.get("token");
     const id = new URL(window.location.href).pathname.split("/")[2];
-    console.log(token, id, ratings, review);
     if (token) {
       apiClient
         .post(
           urls.review.create.replace("{id}", productId),
           {
-            rating: ratings,
-            review: review,
+            rating: userRating,
+            review: userReview,
           },
           {
             headers: {
@@ -116,7 +121,8 @@ const ProductDesc = () => {
           if (response.status === 200) {
             console.log(response);
             setRatings(3);
-            setReview("");
+            setUserReview("");
+            setIsUserReview(true);
             toast("Review Added Successfully", { type: "success" });
           } else {
             toast("Failed to Add Review", { type: "success" });
@@ -128,6 +134,31 @@ const ProductDesc = () => {
     } else {
       toast("Please Login to Add Review", { type: "error" });
     }
+  };
+
+  const deleteReview = () => {
+    const token = Cookies.get("token");
+    const id = new URL(window.location.href).pathname.split("/")[2];
+    apiClient
+      .delete(urls.review.delete.replace("{id}", id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((response) => {
+        console.log(response);
+        if (response.status === 200) {
+          console.log(response);
+          setUserReview("");
+          setIsUserReview(false);
+          toast("Review Deleted Successfully", { type: "success" });
+        } else {
+          toast("Failed to Delete Review", { type: "success" });
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   };
 
   useEffect(() => {
@@ -148,11 +179,17 @@ const ProductDesc = () => {
         setcategoryProducts(response.data[2]);
         setMainImage(response.data[0].images[0]);
         setRatings(response.data[0].ratings);
+        setUserReview(response.data[0].userReview);
+        setUserRating(response.data[0].userRating);
+        setReviews(response.data[0].reviews);
+        if (response.data[0].userReview != null) {
+          setIsUserReview(true);
+        }
       })
       .catch((error) => {
         console.log(error);
       });
-  }, [id]);
+  }, [id, isUserReview]);
 
   useEffect(() => {
     const handlePopstate = () => {
@@ -346,45 +383,114 @@ const ProductDesc = () => {
         <Grid item lg={12}>
           <Box component="form" noValidate sx={{ mt: 1 }}>
             <Typography variant="h5">Ratings and Reviews</Typography>
-            <Rating
-              style={{
-                marginTop: "30px",
-              }}
-              value={ratings}
-              onChange={(e) => {
-                setRatings(e.target.value);
-              }}
-              name="size-medium"
-              defaultValue={2}
-            />
-            <TextField
-              id="writeReview"
-              label="Write a review"
-              variant="outlined"
-              value={review}
-              style={{
-                marginTop: "30px",
-                marginBottom: "20px",
-                width: "100%",
-              }}
-              InputProps={{
-                style: { height: "200px", margin: "dense" },
-              }}
-              onChange={(e) => {
-                setReview(e.target.value);
-              }}
-              multiline
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              onClick={submitReview}
-              sx={{ mt: 3, mb: 2, width: "150px" }}
-            >
-              Submit Review
-            </Button>
+            <Typography variant="h6">Your Ratings</Typography>
+            {token ? (
+              <div>
+                {isUserReview ? (
+                  <>
+                    <Rating
+                      style={{
+                        marginTop: "10px",
+                      }}
+                      value={userRating}
+                      readOnly
+                      name="size-medium"
+                      defaultValue={2}
+                    />
+                    <Typography variant="body1" style={{ marginTop: "10px" }}>
+                      {userReview}
+                    </Typography>
+                    <IconButton aria-label="delete" onClick={deleteReview}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton aria-label="edit">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </>
+                ) : (
+                  <>
+                    <Rating
+                      style={{
+                        marginTop: "10px",
+                      }}
+                      value={userRating}
+                      onChange={(e) => {
+                        setUserRating(e.target.value);
+                      }}
+                      name="size-medium"
+                      defaultValue={2}
+                    />
+                    <TextField
+                      id="writeReview"
+                      label="Write a review"
+                      variant="outlined"
+                      value={userReview}
+                      style={{
+                        marginTop: "30px",
+                        marginBottom: "20px",
+                        width: "100%",
+                      }}
+                      InputProps={{
+                        style: { height: "200px", margin: "dense" },
+                      }}
+                      onChange={(e) => {
+                        setUserReview(e.target.value);
+                      }}
+                      multiline
+                    />
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      onClick={submitReview}
+                      sx={{ mt: 3, mb: 2, width: "150px" }}
+                    >
+                      Submit Review
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Typography variant="body1" style={{ marginTop: "10px" }}>
+                Please log in to write a review
+              </Typography>
+            )}
+
+            <Typography variant="h6" marginTop="10px">
+              Customer Reviews
+            </Typography>
+            {reviews.map((review) => (
+              <div
+                sx={{
+                  paddingLeft: "10px",
+                  display: "flex",
+                  alignItems: "baseline",
+                  flexDirection: "column",
+                }}
+              >
+                <Typography variant="body1" style={{ marginTop: "10px" }}>
+                  {review[0]} {review[1]}
+                </Typography>
+
+                <Rating
+                  style={{
+                    marginTop: "10px",
+                    marginRight: "10px",
+                  }}
+                  value={review[2]}
+                  name="size-small"
+                  size="small"
+                  readOnly
+                />
+                <Typography
+                  variant="body2"
+                  style={{ marginTop: "10px", display: "inline-block" }}
+                >
+                  {review[3]}
+                </Typography>
+              </div>
+            ))}
           </Box>
         </Grid>
         <Grid item lg={12}>

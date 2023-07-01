@@ -151,6 +151,9 @@ def handleProductsAuthOptions():
 # @token_required
 def getProducts():
     productId = request.args.get('id')
+    userId = request.headers.get('userId')
+    
+
     if productId:
         with sqlite3.connect('ecart.db') as conn:
             cur = conn.cursor()
@@ -166,15 +169,42 @@ def getProducts():
                     """, (productId,)
                 )
                 images = cur.fetchall()  # Retrieve all images for the current product
+
+                if userId:
+                    cur.execute(
+                        """
+                        SELECT * FROM productReviews WHERE productId = ? AND userId = ?;
+                        """, (productId, userId)
+                    )
+                    review = cur.fetchone()
+                    if review:
+                        userReview = review[3]
+                        userRating = review[4]
+                    else:
+                        userReview = None
+                        userRating = None
+                else:
+                    userReview = None
+                    userRating = None
+                    
+                
                 cur.execute(
                     """
                     SELECT AVG(rating) FROM productReviews WHERE productId = ?;
-                    """, (productId,)
+                    """,
+                    (productId,)
                 )
-                ratings = cur.fetchone()[0]
-            
-                
-                    
+                result = cur.fetchone()
+                ratings = result[0]
+
+                cur.execute(
+                    """
+                    SELECT u.firstName, u.lastName, r.rating, r.review FROM productReviews r JOIN users u WHERE r.userId = u.userId AND productId = ?;
+                    """,
+                    (productId,)
+                )
+                reviews = cur.fetchall()
+
                 image_list = []
                 for image in images:
                     image_list.append(image[0])
@@ -189,6 +219,9 @@ def getProducts():
                     'ratings': ratings,
                     'description': description,
                     "images": image_list, 
+                    "reviews": reviews,
+                    "userReview": userReview,
+                    "userRating": userRating
                 }
                 
                 cur.execute(
@@ -280,7 +313,7 @@ def cartItems(current_user):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT products.productId, products.name, products.price, productImages.image, categories.name, kart.quantity
+            SELECT products.productId, products.name, products.newPrice, productImages.image, categories.name, kart.quantity
             FROM users, products, kart, categories, productImages
             WHERE users.userId = ? AND users.userId = kart.userId
                 AND products.productId = kart.productId
@@ -415,7 +448,7 @@ def updateQuantity(current_user):
             msg = "Quantity updated successfully"
             conn.commit()
             cur.execute(
-                '''SELECT products.productId, products.name, products.price, categories.name, kart.quantity 
+                '''SELECT products.productId, products.name, products.newPrice, categories.name, kart.quantity 
                    FROM products
                    JOIN kart ON kart.productId = products.productId
                    JOIN categories ON products.categoryId = categories.categoryId
@@ -426,6 +459,7 @@ def updateQuantity(current_user):
         except Exception as e:
             conn.rollback()
             msg = "Error occurred"
+            product = []
             status_code = 500
             traceback.print_exc()  # Print the traceback for debugging purposes
 
@@ -514,7 +548,7 @@ def placeOrderFromCart(current_user):
             cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
                         (userId, orderPayment['cardName'], orderPayment['cardNumber'], orderPayment['expDate'], orderPayment['cvv'], datetime.now()))
             paymentId = cur.lastrowid
-            cur.execute("SELECT p.productId, k.quantity, p.price FROM kart as k, products as p WHERE k.productId = p.productId and userId = ?", (userId,))
+            cur.execute("SELECT p.productId, k.quantity, p.newPrice FROM kart as k, products as p WHERE k.productId = p.productId and userId = ?", (userId,))
             cartItems = cur.fetchall()
 
             cur.execute("INSERT INTO orders (userId, paymentId) VALUES (?, ?)", (userId, paymentId))
@@ -582,7 +616,7 @@ def getOrders(current_user):
 
                 cur.execute(
                     """
-                    SELECT products.productId, products.name, products.description, products.price, categories.name, productImages.image
+                    SELECT products.productId, products.name, products.description, products.newPrice, categories.name, productImages.image
                     FROM products
                     JOIN categories ON products.categoryId = categories.categoryId
                     JOIN productImages ON products.productId = productImages.productId
@@ -713,6 +747,31 @@ def addReview(current_user):
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
     
+@app.route(route + "/reviews/", methods=["DELETE"])
+@token_required
+def deleteReview(current_user):
+    try:
+        productId = request.args.get('id')
+        userId = current_user["userId"]
+
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                DELETE FROM productReviews
+                WHERE productId = ? AND userId = ?
+                """,
+                (productId, userId),
+            )
+
+            conn.commit()
+
+            return {"message": "Review deleted successfully", "status_code": 200}
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
 
 # Seller APIs
 
