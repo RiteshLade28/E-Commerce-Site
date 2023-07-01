@@ -23,6 +23,9 @@ import ProductCard from "./ProductCard";
 import { ToastContainer, toast } from "react-toastify";
 import Cookies from "js-cookie";
 import Store, { IdContext } from "../BuyNow/Store";
+import { Divider } from "@mui/material";
+import Rating from "@mui/material/Rating";
+import TextField from "@mui/material/TextField";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -59,6 +62,8 @@ const ProductDesc = () => {
   const classes = useStyles();
   const navigate = useNavigate();
   const [mainImage, setMainImage] = useState();
+  const [ratings, setRatings] = useState(3);
+  const [review, setReview] = useState("");
 
   const buyNow = (id) => {
     console.log(token, userId);
@@ -87,6 +92,44 @@ const ProductDesc = () => {
       });
   };
 
+  const submitReview = (e) => {
+    e.preventDefault();
+    const token = Cookies.get("token");
+    const id = new URL(window.location.href).pathname.split("/")[2];
+    console.log(token, id, ratings, review);
+    if (token) {
+      apiClient
+        .post(
+          urls.review.create.replace("{id}", productId),
+          {
+            rating: ratings,
+            review: review,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        .then((response) => {
+          console.log(response);
+          if (response.status === 200) {
+            console.log(response);
+            setRatings(3);
+            setReview("");
+            toast("Review Added Successfully", { type: "success" });
+          } else {
+            toast("Failed to Add Review", { type: "success" });
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } else {
+      toast("Please Login to Add Review", { type: "error" });
+    }
+  };
+
   useEffect(() => {
     const id = new URL(window.location.href).pathname.split("/")[2];
     console.log(id);
@@ -104,6 +147,7 @@ const ProductDesc = () => {
         setCategoryName(response.data[1]);
         setcategoryProducts(response.data[2]);
         setMainImage(response.data[0].images[0]);
+        setRatings(response.data[0].ratings);
       })
       .catch((error) => {
         console.log(error);
@@ -225,9 +269,37 @@ const ProductDesc = () => {
           <Typography variant="h3" style={{ marginBottom: "20px" }}>
             {product["name"]}
           </Typography>
-          <Typography variant="h5" style={{ marginBottom: "5px" }}>
-            ₹ {product["price"]}
-          </Typography>
+          <div
+            style={{
+              display: "flex",
+              marginBottom: "5px",
+              alignItems: "baseline",
+            }}
+          >
+            <Typography variant="h5" style={{ marginRight: "10px" }}>
+              ₹ {product["newPrice"]}
+            </Typography>
+            <Typography
+              variant="body1"
+              style={{ marginRight: "10px", textDecoration: "line-through" }}
+            >
+              ₹ {product["oldPrice"]}
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              // fontWeight="bold"
+              style={{ color: "red" }}
+            >
+              {Math.floor(
+                ((product["oldPrice"] - product["newPrice"]) /
+                  product["oldPrice"]) *
+                  100
+              )}
+              % off
+            </Typography>
+          </div>
+
           <Typography
             variant="body1"
             style={{
@@ -239,28 +311,25 @@ const ProductDesc = () => {
             Cash on Delivery Available{" "}
             <CheckCircleIcon style={{ marginLeft: "5px" }} color="success" />
           </Typography>
-          <Typography
-            variant="body1"
-            style={{
-              marginBottom: "10px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            {Array.from({ length: product.ratings }, (value, index) => (
-              <StarIcon key={index} style={{ color: "orange" }} />
-            ))}
-            {product.ratings % 1 !== 0 && (
-              <StarHalfIcon style={{ color: "orange", marginRight: "5px" }} />
-            )}
-            {product["ratings"]}
-          </Typography>
+          <Rating
+            name="text-feedback"
+            value={ratings}
+            readOnly
+            precision={0.5}
+            emptyIcon={
+              <StarIcon style={{ opacity: 0.55 }} fontSize="inherit" />
+            }
+          />
           <Typography variant="h6" style={{ marginBottom: "10px" }}>
             Description
           </Typography>
           <Typography variant="body1">{product["description"]}</Typography>
         </Grid>
       </Grid>
+      <Grid item lg={12} style={{ marginLeft: "75px", marginRight: "100px" }}>
+        <Divider />
+      </Grid>
+
       <Grid
         item
         lg={12}
@@ -274,6 +343,53 @@ const ProductDesc = () => {
           padding: "24px",
         }}
       >
+        <Grid item lg={12}>
+          <Box component="form" noValidate sx={{ mt: 1 }}>
+            <Typography variant="h5">Ratings and Reviews</Typography>
+            <Rating
+              style={{
+                marginTop: "30px",
+              }}
+              value={ratings}
+              onChange={(e) => {
+                setRatings(e.target.value);
+              }}
+              name="size-medium"
+              defaultValue={2}
+            />
+            <TextField
+              id="writeReview"
+              label="Write a review"
+              variant="outlined"
+              value={review}
+              style={{
+                marginTop: "30px",
+                marginBottom: "20px",
+                width: "100%",
+              }}
+              InputProps={{
+                style: { height: "200px", margin: "dense" },
+              }}
+              onChange={(e) => {
+                setReview(e.target.value);
+              }}
+              multiline
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              onClick={submitReview}
+              sx={{ mt: 3, mb: 2, width: "150px" }}
+            >
+              Submit Review
+            </Button>
+          </Box>
+        </Grid>
+        <Grid item lg={12}>
+          <Divider />
+        </Grid>
         <Grid item lg={12}>
           <Typography
             variant="h5"
@@ -298,7 +414,8 @@ const ProductDesc = () => {
               productId={item.productId}
               category={item.category}
               itemName={item.name}
-              price={item.price}
+              newPrice={item.newPrice}
+              oldPrice={item.oldPrice}
               image={item.image}
             />
           </Grid>

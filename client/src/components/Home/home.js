@@ -56,7 +56,8 @@ export default function Home() {
                   productId={item.productId}
                   category={item.category}
                   itemName={item.name}
-                  price={item.price}
+                  newPrice={item.newPrice}
+                  oldPrice={item.oldPrice}
                   image={item.image}
                 />
               </Grid>

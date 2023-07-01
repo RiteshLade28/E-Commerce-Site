@@ -11,24 +11,25 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import Store, {IdContext } from "../BuyNow/Store.js";
+import Store, { IdContext } from "../BuyNow/Store.js";
 
 export default function MediaCard({
   productId,
   itemName,
   category,
-  price,
+  newPrice,
+  oldPrice,
   image,
 }) {
   const token = Cookies.get("token");
   const userId = Cookies.get("userId");
-   
+
   const navigate = useNavigate();
   const { id, setId } = React.useContext(IdContext);
 
   const buyNow = (id) => {
     console.log(token, userId);
-    setId(id);  
+    setId(id);
     navigate("/buyNow/" + id);
   };
   const addToCart = (id) => {
@@ -67,7 +68,7 @@ export default function MediaCard({
               backgroundSize: "contain",
             }}
             image={image}
-            title="Charger"
+            title={itemName}
           />
         </Link>
 
@@ -82,9 +83,34 @@ export default function MediaCard({
               {itemName}
             </Link>
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ₹{price}
+
+          <Typography
+            variant="h6"
+            color="text.primary"
+            // fontWeight="bold"
+            style={{ display: "inline-block" }}
+            marginRight={1}
+          >
+            ₹{newPrice}
           </Typography>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            // fontWeight="bold"
+            style={{ display: "inline-block", textDecoration: "line-through" }}
+          >
+            ₹{oldPrice}
+          </Typography>
+
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            // fontWeight="bold"
+            style={{ color: "red" }}
+          >
+            {Math.floor(((oldPrice - newPrice) / oldPrice) * 100)}% off
+          </Typography>
+
           <Typography variant="body2" color="text.secondary">
             {category}
           </Typography>

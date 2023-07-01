@@ -46,6 +46,12 @@ const urls = {
     delete: "/seller/products/?id={id}",
   },
 
+  review: {
+    get: "/reviews/?id={id}",
+    create: "/reviews/?id={id}",
+    update: "/reviews/?id={id}",
+    delete: "/reviews/?id={id}",
+  },
 
 };
 

@@ -154,19 +154,26 @@ def getProducts():
     if productId:
         with sqlite3.connect('ecart.db') as conn:
             cur = conn.cursor()
-            cur.execute('SELECT p.productId, p.name, p.price, p.ratings, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
+            cur.execute('SELECT p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
             itemData = cur.fetchall()
 
             if itemData:
-                productId, name, price, ratings, description, categoryId, categoryName = itemData[0]
+                productId, name, newPrice, oldPrice, ratings2, description, categoryId, categoryName = itemData[0]
                 print(productId)
                 cur.execute(
                     """
                     SELECT image FROM productImages WHERE productId = ?;
                     """, (productId,)
                 )
-            
                 images = cur.fetchall()  # Retrieve all images for the current product
+                cur.execute(
+                    """
+                    SELECT AVG(rating) FROM productReviews WHERE productId = ?;
+                    """, (productId,)
+                )
+                ratings = cur.fetchone()[0]
+            
+                
                     
                 image_list = []
                 for image in images:
@@ -177,7 +184,8 @@ def getProducts():
                     'categoryId': categoryId,
                     'categoryName': categoryName,
                     'name': name,
-                    'price': price,
+                    'newPrice': newPrice,
+                    'oldPrice': oldPrice,
                     'ratings': ratings,
                     'description': description,
                     "images": image_list, 
@@ -185,7 +193,7 @@ def getProducts():
                 
                 cur.execute(
                     """
-                    SELECT p.productId, p.name, p.price, p.categoryId, i.image
+                    SELECT p.productId, p.name, p.newPrice, p.categoryId, i.image
                     FROM products p
                     JOIN (
                         SELECT productId, image
@@ -204,7 +212,8 @@ def getProducts():
                     relatedProducts.append({
                         'productId': productId,
                         'categoryId': categoryId,
-                        'name': name,
+                        'newPrice': newPrice,
+                        'oldPrice': oldPrice,
                         'price': price,
                         'image': image
                     })
@@ -217,14 +226,14 @@ def getProducts():
 
     with sqlite3.connect('ecart.db') as conn:
         cur = conn.cursor()
-        cur.execute('SELECT p.productId, p.name, p.price, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId ')
+        cur.execute('SELECT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId ')
         itemData = cur.fetchall()
 
         
 
     categoryData = {}
     for item in itemData:
-        productId, name, price, categoryId, categoryName = item
+        productId, name, newPrice, oldPrice, categoryId, categoryName = item
         cur.execute(
             """
             SELECT image FROM productImages WHERE productId = ?;
@@ -239,7 +248,8 @@ def getProducts():
             'productId': productId,
             'categoryId': categoryId,
             'name': name,
-            'price': price,
+            'newPrice': newPrice,
+            'oldPrice': oldPrice,
             'image': image
         })
 
@@ -252,6 +262,7 @@ def getProducts():
         })
 
     return jsonify(formattedData)
+
 
 
 @app.route(route + "/cartItems/", methods=["OPTIONS"])
@@ -665,6 +676,46 @@ def getCategories():
         return {"message": "Error occurred: " + str(e), "status_code": 500}
 
 
+@app.route(route + "/reviews/", methods=["OPTIONS"])
+def handleReviewsOptions():
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+@app.route(route + "/reviews/", methods=["POST"])
+@token_required
+def addReview(current_user):
+    try:
+        data = request.json
+        productId = request.args.get('id')
+        # print(productId)
+        review = data["review"]
+        rating = data["rating"]
+        userId = current_user["userId"]
+
+        with sqlite3.connect("ecart.db") as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                INSERT INTO productReviews (productId, userId, review, rating)
+                VALUES (?, ?, ?, ?)
+                """,
+                (productId, userId, review, rating),
+            )
+
+            conn.commit()
+
+            return {"message": "Review added successfully", "status_code": 200}
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"message": "Error occurred: " + str(e), "status_code": 500}
+    
+
+# Seller APIs
+
 @app.route(authRoute + "/seller/", methods=["OPTIONS"])
 def handleSellerSignUpOptions():
     response = jsonify({})
@@ -775,7 +826,7 @@ def sellerLogin():
 
 
 
-# Seller APIs
+
 sellerRoute = "/api/seller"
 
 @app.route(sellerRoute + "/dashboard/", methods=["GET"])
@@ -1058,7 +1109,6 @@ def updateSellerOrders(current_user):
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
 
-
 @app.route(sellerRoute + "/products/", methods=["GET"])
 @token_required
 def getSellerProducts(current_user):
@@ -1245,6 +1295,9 @@ def updateProduct(current_user):
 
     conn.close()
     return make_response(msg, status_code)
+
+
+
 
 
 if __name__ == "__main__":

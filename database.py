@@ -61,18 +61,18 @@ cartItems = [
 
 conn = sqlite3.connect("ecart.db")
 
-conn.execute('''CREATE TABLE products
-		(productId INTEGER PRIMARY KEY,
-        sellerId INTEGER,
-		name TEXT,
-		newprice REAL,
-        oldprice REAL,
-		ratings REAL,
-		categoryId INTEGER,
-        description TEXT,
-        stock INTEGER,
-		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
-		)''')
+# conn.execute('''CREATE TABLE products
+# 		(productId INTEGER PRIMARY KEY,
+#         sellerId INTEGER,
+# 		name TEXT,
+# 		newprice REAL,
+#         oldprice REAL,
+# 		ratings REAL,
+# 		categoryId INTEGER,
+#         description TEXT,
+#         stock INTEGER,
+# 		FOREIGN KEY(categoryId) REFERENCES categories(categoryId)
+# 		)''')
 
 # conn.execute('''CREATE TABLE users 
 # 		(userId INTEGER PRIMARY KEY, 
@@ -183,6 +183,17 @@ conn.execute('''CREATE TABLE products
 #         image BLOB,
 #         FOREIGN KEY(productId) REFERENCES products(productId)
 #         )''')
+
+conn.execute('''CREATE TABLE productReviews
+        (productReviewId INTEGER PRIMARY KEY,
+        productId INTEGER,
+        userId INTEGER,
+        review TEXT,
+        rating REAL,
+        FOREIGN KEY(productId) REFERENCES products(productId),
+        FOREIGN KEY(userId) REFERENCES users(userId)
+        )''')
+
 
 
 
