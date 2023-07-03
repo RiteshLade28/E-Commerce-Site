@@ -1,5 +1,5 @@
 from markupsafe import escape
-import sqlite3
+import psycopg2
 from flask import Flask, abort, render_template, make_response, jsonify, request
 from flask_cors import CORS
 import traceback
@@ -70,7 +70,7 @@ def signup():
     state = data.get('state')
     country = data.get('country')
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute("SELECT email FROM users WHERE email = ?", (email,))
         if cur.fetchone() is not None:
@@ -97,7 +97,7 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = cur.fetchone()
@@ -155,7 +155,7 @@ def getProducts():
     
 
     if productId:
-        with sqlite3.connect('ecart.db') as conn:
+        with psycopg2.connect('ecart.db') as conn:
             cur = conn.cursor()
             cur.execute('SELECT p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = ?', (productId,))
             itemData = cur.fetchall()
@@ -257,7 +257,7 @@ def getProducts():
 
                 return jsonify([product, categoryName, relatedProducts])
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute('SELECT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId ')
         itemData = cur.fetchall()
@@ -309,7 +309,7 @@ def handleCartItemsOptions():
 @token_required
 def cartItems(current_user):
     userId = current_user['userId']
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute(
             """
@@ -356,7 +356,7 @@ def cartItems(current_user):
 @token_required
 def clearCart(current_user):
     userId = current_user['userId']
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute("DELETE FROM kart WHERE userId = ?", (userId,))
@@ -384,7 +384,7 @@ def addToCart(current_user):
     productId = request.args.get('id')
     userId = current_user['userId']  # Extract userId from the decoded token
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
 
         try:
@@ -420,7 +420,7 @@ def addToCart(current_user):
 def removeFromCart(current_user):
     productId = request.args.get('id')
     print(productId)
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute("DELETE FROM kart WHERE productId = ?", (productId,))
@@ -441,7 +441,7 @@ def updateQuantity(current_user):
     new_quantity = request.headers.get('quantity')
 
     print(new_quantity)
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute("UPDATE kart SET quantity = ? WHERE productId = ?", (new_quantity, productId,))
@@ -486,7 +486,7 @@ def placeOrder(current_user):
 
     
     orderId = None
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
 
         try:
@@ -542,7 +542,7 @@ def placeOrderFromCart(current_user):
     orderAddress = data["orderAddress"]
     userId = current_user['userId'] 
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute("INSERT INTO payments (userId, nameOnCard, cardNumber, expiryDate, cvv, paymentDate) VALUES (?, ?, ?, ?, ?, ?)", 
@@ -583,7 +583,7 @@ def getOrders(current_user):
     userId = current_user["userId"]  # Extract userId from the decoded token
 
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -682,7 +682,7 @@ def handleCategoriesOptions():
 @app.route(route + "/categories/", methods=["GET"])
 def getCategories():
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -728,7 +728,7 @@ def addReview(current_user):
         rating = data["rating"]
         userId = current_user["userId"]
 
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -754,7 +754,7 @@ def deleteReview(current_user):
         productId = request.args.get('id')
         userId = current_user["userId"]
 
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -804,7 +804,7 @@ def sellerSignUp():
     ifscCode = data["ifscCode"]
 
 
-    with sqlite3.connect("ecart.db") as conn:
+    with psycopg2.connect("ecart.db") as conn:
         cur = conn.cursor()
         try:
             cur.execute("SELECT email FROM users WHERE email = ?", (email,))
@@ -857,7 +857,7 @@ def sellerLogin():
     password = data.get('password')
     print(email)
 
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM sellers WHERE email = ?", (email,))
         user = cur.fetchone()
@@ -894,7 +894,7 @@ def getSellerDashboard(current_user):
     userId = current_user["userId"]
     print(userId)
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -1024,7 +1024,7 @@ def getSellerDashboard(current_user):
 def getSellerOrders(current_user):
     userId = current_user["userId"]
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -1122,7 +1122,7 @@ def updateSellerOrders(current_user):
     print(orderDetailsId)
 
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -1176,7 +1176,7 @@ def getSellerProducts(current_user):
     print(product_id)
     if product_id != "{id}":
         try:
-            with sqlite3.connect("ecart.db") as conn:
+            with psycopg2.connect("ecart.db") as conn:
                 cur = conn.cursor()
 
                 cur.execute(
@@ -1225,7 +1225,7 @@ def getSellerProducts(current_user):
             traceback.print_exc()
             return {"message": "Error occurred: " + str(e), "status_code": 500}
     try:
-        with sqlite3.connect("ecart.db") as conn:
+        with psycopg2.connect("ecart.db") as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -1279,7 +1279,7 @@ def getSellerProducts(current_user):
 def addProduct(current_user):
     userId = current_user["userId"]
     new_quantity = request.headers.get('quantity')
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         product = request.get_json()
         # print(product["images"])
 
@@ -1311,7 +1311,7 @@ def addProduct(current_user):
 def deleteProduct(current_user):
     userId = current_user["userId"]
     productId = request.args.get('id')
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         cur = conn.cursor()
         try:
             cur.execute('''DELETE FROM products WHERE productId = ? and sellerId = ?''', (productId, userId))
@@ -1333,7 +1333,7 @@ def deleteProduct(current_user):
 def updateProduct(current_user):
     userId = current_user["userId"]
     product_id = request.args.get('id')
-    with sqlite3.connect('ecart.db') as conn:
+    with psycopg2.connect('ecart.db') as conn:
         product = request.get_json()
         cur = conn.cursor()
         try:
@@ -1356,7 +1356,43 @@ def updateProduct(current_user):
     return make_response(msg, status_code)
 
 
+@app.route(authRoute + '/user/profile/', methods=["GET"])
+@token_required
+def getProfile(current_user):
+    userId = current_user["userId"]
+    with psycopg2.connect('ecart.db') as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute('''SELECT * from users where userId = ?''', (userId,))
+            user = cur.fetchone()
 
+            userDetails = {
+                    "userId": user[0],
+                    "firstName": user[4],
+                    "lastName": user[5],
+                    "address": user[6],
+                    "city": user[7],
+                    "pinCode": user[8],
+                    "state": user[9],
+                    "country": user[10],
+                }
+            
+            return {
+                    "message": "User retrieved successfully",
+                    "user": userDetails,
+                    "status_code": 200,
+                }
+
+        except:
+            conn.rollback()
+            msg = "Error occurred"
+            status_code = 500
+            traceback.print_exc()
+
+    conn.close()
+    return make_response(msg, status_code)
+
+# @app.route(authRoute + '/user/profile/', methods=["PATCH"])
 
 
 if __name__ == "__main__":

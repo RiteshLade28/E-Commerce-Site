@@ -4,6 +4,8 @@ const urls = {
     signup: "/auth/signup",
     sellerSignUp: "/auth/seller/signup/",
     sellerLogin: "/auth/seller/login/",
+    userUpdate: "/auth/user/profile/",
+    sellerUpdate: "/auth/seller/profile/"
   },
   checkauth: {
     get: "/checkauth",

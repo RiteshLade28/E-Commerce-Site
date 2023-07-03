@@ -52,3 +52,4 @@ print(table)
 # Close the cursor and the connection
 cursor.close()
 conn.close()
+
