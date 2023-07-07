@@ -40,14 +40,14 @@ export default function UpdateProfile() {
     const token = Cookies.get("token");
     event.preventDefault();
 
-    let signup = await apiClient.post(
+    let signup = await apiClient.patch(
       urls.auth.userUpdate,
       {
         firstName: firstName,
         lastName: lastName,
         address: address,
         city: city,
-        pincode: pincode,
+        pinCode: pincode,
         state: state,
         country: country,
       },

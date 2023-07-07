@@ -55,7 +55,7 @@ export default function ShoppingCart() {
                   <ShoppingCartItem
                     productId={item.productId}
                     category={item.category}
-                    itemName={item.itemName}
+                    itemName={item.name}
                     quantity={item.quantity}
                     price={item.price}
                     image={item.image}

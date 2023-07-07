@@ -21,6 +21,7 @@ import SellerOrders from "./components/Seller Dashboard/Orders.js";
 import AddProduct from "./components/Seller Dashboard/AddProduct";
 import EditProduct from "./components/Seller Dashboard/EditProduct";
 import Profile from "./components/UserProfile/Profile";
+import SellerProfile from "./components/SellerProfile/SellerProfile";
 
 function App() {
   const location = useLocation();
@@ -65,6 +66,7 @@ function App() {
           path="/seller/editProduct/:productId"
         />
         <Route element={<Profile />} path="/profile" />
+        <Route element={<SellerProfile />} path="/seller/account"/>
       </Routes>
 
       {shouldShowNavBarAndFooter && <Footer />}

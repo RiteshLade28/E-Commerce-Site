@@ -1,4 +1,4 @@
-import React, {useContext} from "react";
+import React, { useContext } from "react";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
@@ -6,7 +6,7 @@ import Typography from "@mui/material/Typography";
 import { makeStyles } from "@mui/styles";
 import { Grid, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import Store, {BuyFromCartContext} from "../BuyNow/Store";
+import Store, { BuyFromCartContext } from "../BuyNow/Store";
 
 const useStyles = makeStyles({
   root: {
@@ -29,9 +29,9 @@ const useStyles = makeStyles({
 export default function MediaCard({ price, totalItems }) {
   const navigate = useNavigate();
 
-
   const classes = useStyles();
   const shippingPrice = totalItems ? 100 : 0;
+  const clickable = totalItems ? true : false;
   return (
     <Card className={classes.root} elevation={15}>
       <Grid container>
@@ -80,7 +80,7 @@ export default function MediaCard({ price, totalItems }) {
               size="large"
               color="secondary"
               onClick={() => {
-                navigate("/buyNow/cart");
+                if (clickable) navigate("/buyNow/cart");
               }}
             >
               BUY NOW ({totalItems})
