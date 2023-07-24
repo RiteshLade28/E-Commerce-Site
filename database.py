@@ -132,7 +132,7 @@ conn = sqlite3.connect("ecart.db")
 #         )''')
 
 # conn.execute('''CREATE TABLE payments
-#         (paymentId INTEGER PRIMARY KEY,
+#         (paymentId INTEGER PRIMARY KEY,kl;'+
 #         userId INTEGER,
 #         nameOnCard TEXT,
 #         cardNumber TEXT,
