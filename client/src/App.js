@@ -14,12 +14,12 @@ import BuyNow from "./components/BuyNow/BuyNow";
 import Orders from "./components/Orders/Orders";
 import BeASeller from "./components/Auth/BeASeller";
 import SellerLogin from "./components/Auth/SellerLogin";
-import Dashboard from "./components/Seller Dashboard/Dashboard";
-import SellerNavbar from "./components/Seller Dashboard/Navbar.js";
-import Products from "./components/Seller Dashboard/Products.js";
-import SellerOrders from "./components/Seller Dashboard/Orders.js";
-import AddProduct from "./components/Seller Dashboard/AddProduct";
-import EditProduct from "./components/Seller Dashboard/EditProduct";
+import Dashboard from "./components/SellerDashboard/Dashboard";
+import SellerNavbar from "./components/SellerDashboard/Navbar.js";
+import Products from "./components/SellerDashboard/Products.js";
+import SellerOrders from "./components/SellerDashboard/Orders.js";
+import AddProduct from "./components/SellerDashboard/AddProduct";
+import EditProduct from "./components/SellerDashboard/EditProduct";
 import Profile from "./components/UserProfile/Profile";
 import SellerProfile from "./components/SellerProfile/SellerProfile";
 
