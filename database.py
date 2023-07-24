@@ -6,21 +6,22 @@ DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
 
-def execute_query(query, params=None):
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
-    )
-    cur = conn.cursor()
-    if params:
-        cur.execute(query, params)
-    else:
+def execute_query(query):
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        cur = conn.cursor()
         cur.execute(query)
-    data = cur.fetchall()
-    conn.close()
-    return data
+        conn.commit()
+    except Exception as e:
+        print("Error occurred:", e)
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 
@@ -56,9 +57,9 @@ create_users_table_query = '''
 '''
 
 create_categories_table_query = '''CREATE TABLE categories
-		(categoryId INTEGER PRIMARY KEY,
-		name TEXT
-		)'''
+        (categoryId SERIAL PRIMARY KEY,
+        name TEXT
+        )'''
 
 
 create_kart_table_query = '''CREATE TABLE kart
@@ -71,15 +72,15 @@ create_kart_table_query = '''CREATE TABLE kart
 
 
 create_orders_table_query = '''CREATE TABLE orders
-		(orderId INTEGER PRIMARY KEY,
+        (orderId SERIAL PRIMARY KEY,
         userId INTEGER,
         paymentId INTEGER,
         FOREIGN KEY(userId) REFERENCES users(userId),
         FOREIGN KEY(paymentId) REFERENCES payments(paymentId)
-		)'''
+        )'''
 
 create_orderDetails_table_query = '''CREATE TABLE orderDetails
-        (orderDetailsId INTEGER PRIMARY KEY,
+        (orderDetailsId SERIAL PRIMARY KEY,
         orderId INTEGER,
         productId INTEGER,
         quantity INTEGER,
@@ -94,12 +95,12 @@ create_orderDetails_table_query = '''CREATE TABLE orderDetails
         shippingDate TEXT,
         deliveryDate TEXT,
         orderStatus TEXT,
-        FOREIGN KEY(productId) REFERENCES products(productId)
+        FOREIGN KEY(productId) REFERENCES products(productId),
         FOREIGN KEY(orderId) REFERENCES orders(orderId)
         )'''
 
 create_payments_table_query = '''CREATE TABLE payments
-        (paymentId INTEGER PRIMARY KEY,kl;'+
+        (paymentId SERIAL PRIMARY KEY,
         userId INTEGER,
         nameOnCard TEXT,
         cardNumber TEXT,
@@ -110,7 +111,7 @@ create_payments_table_query = '''CREATE TABLE payments
         )'''
 
 create_sellers_table_query = '''CREATE TABLE sellers
-        (sellerId INTEGER PRIMARY KEY,
+        (sellerId SERIAL PRIMARY KEY,
         firstName TEXT,
         lastName TEXT,
         email TEXT UNIQUE,
@@ -127,12 +128,12 @@ create_sellers_table_query = '''CREATE TABLE sellers
 create_sellerCategory_table_query = '''CREATE TABLE sellerCategory (
         seller_id INT,
         category_id INT,
-        FOREIGN KEY (seller_id) REFERENCES sellers(id),
-        FOREIGN KEY (category_id) REFERENCES categories(id)
+        FOREIGN KEY (seller_id) REFERENCES sellers(sellerId),
+        FOREIGN KEY (category_id) REFERENCES categories(categoryId)
         )'''
 
 create_sellerAccounts_table_query = '''CREATE TABLE sellerAccounts
-        (sellerAccountId INTEGER PRIMARY KEY,
+        (sellerAccountId SERIAL PRIMARY KEY,
         sellerId INTEGER,
         accountNumber TEXT,
         accountHolderName TEXT,
@@ -145,14 +146,14 @@ create_sellerAccounts_table_query = '''CREATE TABLE sellerAccounts
 
 
 create_productImages_table_query = '''CREATE TABLE productImages
-        (productImageId INTEGER PRIMARY KEY,
+        (productImageId SERIAL PRIMARY KEY,
         productId INTEGER,
-        image BLOB,
+        image BYTEA,
         FOREIGN KEY(productId) REFERENCES products(productId)
         )'''
 
 create_productReviews_table_query = '''CREATE TABLE productReviews
-        (productReviewId INTEGER PRIMARY KEY,
+        (productReviewId SERIAL PRIMARY KEY,
         productId INTEGER,
         userId INTEGER,
         review TEXT,
@@ -160,6 +161,71 @@ create_productReviews_table_query = '''CREATE TABLE productReviews
         FOREIGN KEY(productId) REFERENCES products(productId),
         FOREIGN KEY(userId) REFERENCES users(userId)
         )'''
+
+
+# execute_query(create_categories_table_query)
+# execute_query(create_products_table_query)
+# execute_query(create_users_table_query)
+# execute_query(create_kart_table_query)
+# execute_query(create_payments_table_query)
+# execute_query(create_orders_table_query)
+# execute_query(create_orderDetails_table_query)
+# execute_query(create_sellers_table_query)
+# execute_query(create_sellerCategory_table_query)
+# execute_query(create_sellerAccounts_table_query)
+# execute_query(create_productImages_table_query)
+# execute_query(create_productReviews_table_query)
+
+# execute_query("DROP TABLE IF EXISTS orderDetails CASCADE")
+
+# execute_query("DROP TABLE IF EXISTS products CASCADE")
+# execute_query(create_products_table_query)
+
+# # execute_query("DROP TABLE IF EXISTS sellercategory CASCADE")
+# # execute_query(create_sellerCategory_table_query)
+
+# # execute_query("DROP TABLE IF EXISTS categories CASCADE")
+# # execute_query(create_categories_table_query)
+
+# # execute_query(create_orderDetails_table_query)
+
+# execute_query("DROP TABLE IF EXISTS orders CASCADE")
+# # execute_query(create_orders_table_query)
+
+# execute_query("DROP TABLE IF EXISTS payments CASCADE")
+# # execute_query(create_payments_table_query)
+
+# execute_query("DROP TABLE IF EXISTS sellers CASCADE")
+# # execute_query(create_sellers_table_query)
+
+# execute_query("DROP TABLE IF EXISTS sellerAccounts CASCADE")
+# # execute_query(create_sellerAccounts_table_query)
+
+# execute_query("DROP TABLE IF EXISTS productImages CASCADE ")
+# # execute_query(create_productImages_table_query)
+
+# execute_query("DROP TABLE IF EXISTS productReviews CASCADE")
+# # execute_query(create_productReviews_table_query)
+
+
+
+
+
+categories = [
+    "Electronics",
+    "Fashion",
+    "Sports",
+    "Home",
+    "Beauty",
+    "Toys",
+    "Grocery",
+    "Books",
+]
+
+for category in categories:
+    query = f"INSERT INTO categories (name) VALUES ('{category}')"
+    execute_query(query)
+
 
 
 
