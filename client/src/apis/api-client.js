@@ -4,7 +4,7 @@ const BASEURL = process.env.BASEURL;
 console.log("BASEURL", BASEURL);
 
 const apiClient = axios.create({
-  baseURL: `https://mern-store-backend1.onrender.com/api`,
+  baseURL: `http://localhost:5000/api`,
   headers: {
     "Content-Type": "application/json",
   },

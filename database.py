@@ -6,7 +6,7 @@ DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
 
-def execute_query(query):
+def execute_query(query, params=None):
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -15,8 +15,11 @@ def execute_query(query):
             password=DB_PASSWORD
         )
         cur = conn.cursor()
-        cur.execute(query)
+        cur.execute(query, params)
         conn.commit()
+        data = cur.fetchall()
+        print(data)
+        print("Query executed successfully")
     except Exception as e:
         print("Error occurred:", e)
     finally:
@@ -45,7 +48,7 @@ create_users_table_query = '''
         userId SERIAL PRIMARY KEY,
         email TEXT,
         password TEXT,
-        salt INTEGER,
+        salt BYTEA,
         firstName TEXT,
         lastName TEXT,
         address TEXT,
@@ -116,7 +119,7 @@ create_sellers_table_query = '''CREATE TABLE sellers
         lastName TEXT,
         email TEXT UNIQUE,
         password TEXT,
-        salt INTEGER,
+        salt bytea,
         phoneNumber TEXT,
         address TEXT,
         city TEXT,
@@ -207,24 +210,30 @@ create_productReviews_table_query = '''CREATE TABLE productReviews
 # execute_query("DROP TABLE IF EXISTS productReviews CASCADE")
 # # execute_query(create_productReviews_table_query)
 
+# execute_query("DROP TABLE IF EXISTS sellers CASCADE")
+# execute_query(create_sellers_table_query)
+# execute_query("ALTER TABLE users ALTER COLUMN salt TYPE bytea")
 
+# execute_query('''SELECT * FROM users''', (1,))
 
+# # execute_query('''SELECT * FROM sellerAccounts''', (1,))
+# execute_query('''DELETE FROM productImages WHERE productId = %s ''', (5,))
+execute_query('''DELETE FROM users WHERE userId = %s ''', (3,))
 
+# categories = [
+#     "Electronics",
+#     "Fashion",
+#     "Sports",
+#     "Home",
+#     "Beauty",
+#     "Toys",
+#     "Grocery",
+#     "Books",
+# ]
 
-categories = [
-    "Electronics",
-    "Fashion",
-    "Sports",
-    "Home",
-    "Beauty",
-    "Toys",
-    "Grocery",
-    "Books",
-]
-
-for category in categories:
-    query = f"INSERT INTO categories (name) VALUES ('{category}')"
-    execute_query(query)
+# for category in categories:
+#     query = f"INSERT INTO categories (name) VALUES ('{category}')"
+#     execute_query(query)
 
 
 

@@ -29,7 +29,7 @@ DB_PASSWORD = os.environ["DB_PASSWORD"]
 
 
 
-def execute_query(query, params=None):
+def execute_query(query, params=None, no_return=False):
     conn = psycopg2.connect(
         host=DB_HOST,
         database=DB_NAME,
@@ -37,13 +37,23 @@ def execute_query(query, params=None):
         password=DB_PASSWORD
     )
     cur = conn.cursor()
-    if params:
-        cur.execute(query, params)
+
+    if no_return:
+        if params:
+            cur.execute(query, params)
+        else:
+            cur.execute(query)
+        conn.commit()
+        conn.close()
     else:
-        cur.execute(query)
-    data = cur.fetchall()
-    conn.close()
-    return data
+        if params:
+            cur.execute(query, params)
+        else:
+            cur.execute(query)
+        data = cur.fetchall()
+        conn.commit()
+        conn.close()
+        return data
 
 
 
@@ -86,8 +96,8 @@ def handleSignupOptions():
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
     data = request.json
-    firstname = data.get('firstname')
-    lastname = data.get('lastname')
+    firstname = data.get('firstName')
+    lastname = data.get('lastName')
     email = data.get('email')
     password = data.get('password')
     address = data.get('address')
@@ -95,6 +105,8 @@ def signup():
     pincode = data.get('pincode')
     state = data.get('state')
     country = data.get('country')
+
+    print(firstname, lastname, email, password, address, city, pincode, state, country)
 
     email_exists = execute_query("SELECT email FROM users WHERE email = %s", (email,))
     if email_exists:
@@ -106,8 +118,8 @@ def signup():
 
     # Insert the user data into the database
     insert_query = "INSERT INTO users (firstname, lastname, email, password, salt, address, city, pincode, state, country) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    execute_query(insert_query, (firstname, lastname, email, hashed_password, salt, address, city, pincode, state, country))
 
+    execute_query(insert_query, (firstname, lastname, email, hashed_password, salt, address, city, pincode, state, country), no_return=True)
     return jsonify({"message": "Signup successful"}), 201
 
 
@@ -126,14 +138,18 @@ def login():
     password = data.get('password')
 
     user = execute_query("SELECT * FROM users WHERE email = %s", (email,))
+    print(user)
     if not user:
         return jsonify({"message": "Invalid credentials"}), 400
     else:
         user = user[0]  # Get the first row from the result
-        db_password = user[3]  # Assuming password hash is stored in the 4th column
-        salt = user[5]  # Assuming salt is stored in the 6th column
+        db_password = user[2]  # Assuming password hash is stored in the 4th column
+        salt = user[3]  # Assuming salt is stored in the 6th column
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt.encode('utf-8'))
+        salt_bytes = bytes(salt)
+        print(user[4])
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt_bytes)
 
         if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
             expiry = datetime.utcnow() + timedelta(days=1)
@@ -143,8 +159,8 @@ def login():
                 "userId": user[0],
                 "email": email
             }
-            token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm="HS256").decode('utf-8')
-            return jsonify({"token": token, "userId": user[0], "email": email, "firstName": user[1], "lastName": user[2]}), 200
+            token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm="HS256")
+            return jsonify({"token": token, "userId": user[0], "email": email, "firstName": user[4], "lastName": user[5]}), 200
         else:
             return jsonify({"message": "Invalid credentials"}), 400
 
@@ -177,63 +193,67 @@ def handleProductsAuthOptions():
 def getProducts():
     productId = request.args.get('id')
     userId = request.headers.get('userId')
-    
 
-    if productId:
+    print(productId)
+
+    if productId != '{id}':
         try:
             itemData = execute_query(
-                'SELECT p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId WHERE p.productId = %s;',
-                (productId,)
+                '''
+                SELECT p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, c.categoryId, c.name 
+                FROM products p 
+                INNER JOIN categories c ON p.categoryId = c.categoryId 
+                WHERE p.productId = %s;
+                ''',
+                (productId,),
             )
 
             if itemData:
-                productId, name, newPrice, oldPrice, ratings2, description, categoryId, categoryName = itemData[0]
-                print(productId)
-                cur.execute(
-                    """
-                    SELECT image FROM productImages WHERE productId = ?;
-                    """, (productId,)
+                productId, name, newPrice, oldPrice, ratings, description, categoryId, categoryName = itemData[0]
+
+                images = execute_query(
+                    '''
+                    SELECT image FROM productImages WHERE productId = %s;
+                    ''',
+                    (productId,),
                 )
-                images = cur.fetchall()  # Retrieve all images for the current product
+
+                image_list = [bytes(image[0]).decode('utf-8') for image in images]
 
                 if userId:
-                    cur.execute(
-                        """
-                        SELECT * FROM productReviews WHERE productId = ? AND userId = ?;
-                        """, (productId, userId)
+                    review = execute_query(
+                        '''
+                        SELECT * FROM productReviews WHERE productId = %s AND userId = %s;
+                        ''',
+                        (productId, userId),
                     )
-                    review = cur.fetchone()
                     if review:
-                        userReview = review[3]
-                        userRating = review[4]
+                        userReview = review[0][3]
+                        userRating = review[0][4]
                     else:
                         userReview = None
                         userRating = None
                 else:
                     userReview = None
                     userRating = None
-                    
-                
-                cur.execute(
-                    """
-                    SELECT AVG(rating) FROM productReviews WHERE productId = ?;
-                    """,
-                    (productId,)
-                )
-                result = cur.fetchone()
-                ratings = result[0]
 
-                cur.execute(
-                    """
-                    SELECT u.firstName, u.lastName, r.rating, r.review FROM productReviews r JOIN users u WHERE r.userId = u.userId AND productId = ?;
-                    """,
-                    (productId,)
+                ratings_result = execute_query(
+                    '''
+                    SELECT AVG(rating) FROM productReviews WHERE productId = %s;
+                    ''',
+                    (productId,),
                 )
-                reviews = cur.fetchall()
+                ratings = ratings_result[0][0]
 
-                image_list = []
-                for image in images:
-                    image_list.append(image[0])
+                reviews = execute_query(
+                    '''
+                    SELECT u.firstName, u.lastName, r.rating, r.review 
+                    FROM productReviews r 
+                    JOIN users u ON r.userId = u.userId 
+                    WHERE productId = %s;
+                    ''',
+                    (productId,),
+                )
 
                 product = {
                     'productId': productId,
@@ -244,29 +264,38 @@ def getProducts():
                     'oldPrice': oldPrice,
                     'ratings': ratings,
                     'description': description,
-                    "images": image_list, 
-                    "reviews": reviews,
-                    "userReview": userReview,
-                    "userRating": userRating
+                    'images': image_list,
+                    'reviews': reviews,
+                    'userReview': userReview,
+                    'userRating': userRating,
                 }
-                
-                cur.execute(
-                    """
-                    SELECT p.productId, p.name, p.newPrice, p.categoryId, i.image
+
+                categoryData = execute_query(
+                    '''
+                    SELECT DISTINCT ON (p.productId)
+                        p.productId,
+                        p.name,
+                        p.newPrice,
+                        p.categoryId,
+                        i.image
                     FROM products p
                     JOIN (
-                        SELECT productId, image
+                        SELECT DISTINCT ON (productId) -- Ensure distinct images per product
+                            productId,
+                            image
                         FROM productImages
-                        GROUP BY productId
+                        ORDER BY productId, image -- Choose which image to select (you can use any desired ordering)
                     ) i ON p.productId = i.productId
-                    WHERE categoryId = ?
-                    """, (categoryId,)
+                    WHERE p.categoryId = %s;
+
+                    ''',
+                    (categoryId,),
                 )
-                categoryData = cur.fetchall()
+
+                # print(categoryData)
+
                 relatedProducts = []
-                relatedProductsCnt = 0
                 for item in categoryData:
-                    relatedProductsCnt +=1
                     productId, name, price, categoryId, image = item
                     relatedProducts.append({
                         'productId': productId,
@@ -274,56 +303,61 @@ def getProducts():
                         'newPrice': newPrice,
                         'oldPrice': oldPrice,
                         'price': price,
-                        'image': image
+                        'image': bytes(image).decode('utf-8'),
                     })
 
-                # print(categoryData)
-
-                
-
                 return jsonify([product, categoryName, relatedProducts])
+
         except Exception as e:
             print("Error:", e)
             return jsonify({"error": "An error occurred."}), 500
 
-    with sqlite3.connect('ecart.db') as conn:
-        cur = conn.cursor()
-        cur.execute('SELECT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name FROM products p INNER JOIN categories c ON p.categoryId = c.categoryId ')
-        itemData = cur.fetchall()
+    try:
+        # Retrieve product data with images from PostgreSQL
+        query_product_data = '''
+            SELECT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name, i.image AS categoryName
+            FROM products AS p
+            INNER JOIN categories AS c ON p.categoryId = c.categoryId
+            LEFT JOIN productImages AS i ON p.productId = i.productId
+        '''
+        itemData = execute_query(query_product_data)
 
-        
+        categoryData = {}
+        for item in itemData:
+            productId, name, newPrice, oldPrice, categoryId, categoryName, image,  = item
 
-    categoryData = {}
-    for item in itemData:
-        productId, name, newPrice, oldPrice, categoryId, categoryName = item
-        cur.execute(
-            """
-            SELECT image FROM productImages WHERE productId = ?;
-            """, (productId,)
-        )
+            # Convert the image binary data to bytes
             
-        image = cur.fetchall()[0][0]  # Retrieve the first image for the current product
+            if image is not None:
+                image = bytes(image[0]).decode('utf-8')
 
-        if categoryId not in categoryData:
-            categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
-        categoryData[categoryId]['products'].append({
-            'productId': productId,
-            'categoryId': categoryId,
-            'name': name,
-            'newPrice': newPrice,
-            'oldPrice': oldPrice,
-            'image': image
-        })
+            if categoryId not in categoryData:
+                categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
+                categoryData[categoryId]['products'].append({
+                    'productId': productId,
+                    'categoryId': categoryId,
+                    'name': name,
+                    'newPrice': newPrice,
+                    'oldPrice': oldPrice,
+                    'image': image,
+            })
 
-    formattedData = []
-    for categoryId, categoryInfo in categoryData.items():
-        formattedData.append({
-            'categoryId': categoryId,
-            'categoryName': categoryInfo['categoryName'],
-            'products': categoryInfo['products']
-        })
+        formattedData = []
+        for categoryId, categoryInfo in categoryData.items():
+            formattedData.append({
+                'categoryId': categoryId,
+                'categoryName': categoryInfo['categoryName'],
+                'products': categoryInfo['products'],
+            })
 
-    return jsonify(formattedData)
+    
+
+        return jsonify(formattedData)
+
+    except Exception as e:
+        traceback.print_exc()
+        return make_response("Error occurred", 500)
+
 
 
 
@@ -877,7 +911,7 @@ def sellerSignUp():
 
         query_insert_seller = """
             INSERT INTO sellers (firstName, lastName, email, password, salt, phoneNumber, address, city, pincode, state, country)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING sellerId
         """
         query_insert_seller_account = """
             INSERT INTO sellerAccounts (sellerId, accountNumber, accountHolderName, accountBalance, bankName, branchName, ifscCode)
@@ -900,7 +934,9 @@ def sellerSignUp():
             # Insert seller data
             seller_data = (firstName, lastName, email, hashed_password, salt, phoneNumber, address, city, pincode, state, country)
             cur.execute(query_insert_seller, seller_data)
-            seller_id = cur.lastrowid
+            seller_id = cur.fetchone()[0]
+
+            print("seller_id", seller_id)
 
             # Insert seller account data
             accountBalance = round(random.uniform(10000, 100000), 2)
@@ -920,7 +956,7 @@ def sellerSignUp():
                 seller_category_data = (seller_id, category_id)
                 cur.execute(query_insert_seller_category, seller_category_data)
 
-            conn.commit()
+            # conn.commit()
             status_code = 201
             msg = "Seller signed up successfully"
 
@@ -949,7 +985,13 @@ def sellerLogin():
         db_password = user[4]  # Assuming password hash is stored in the 5th column
         salt = user[5]  # Assuming salt is stored in the 6th column
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+        print(salt)
+
+        salt_bytes = bytes(salt)
+
+        print(salt_bytes)
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt_bytes)
 
         if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
             expiry = datetime.utcnow() + timedelta(days=1)
@@ -1200,51 +1242,47 @@ def updateSellerOrders(current_user):
     orderStatus = body.get('orderStatus')
 
     try:
-        with sqlite3.connect("ecart.db") as conn:
-            cur = conn.cursor()
+        # Update orderStatus in the orderDetails table
+        update_query = """
+            UPDATE orderDetails SET orderStatus = %s WHERE orderDetailsId = %s;
+        """
+        execute_query(update_query, (orderStatus, orderDetailsId), no_return=True)
 
-            cur.execute(
-                """
-                UPDATE orderDetails SET orderStatus = %s WHERE orderDetailsId = %s;
-                """, (orderStatus, orderDetailsId,)
-            )
+        msg = "Status updated successfully"
 
-            msg = "Status updated successfully"
-            conn.commit()
+        # Retrieve updated orders
+        query_orders = """
+            SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || '-' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus, od.orderDetailsId
+            FROM users as u
+            JOIN orders AS o
+            JOIN orderDetails AS od
+            JOIN products as p
+            WHERE o.orderId = od.orderId AND u.userId = o.userId AND od.productId = p.productId AND p.sellerId = %s;
+        """
+        orders = execute_query(query_orders, (userId,))
 
-            # Retrieve updated orders
-            query_orders = """
-                SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.address || ', ' || od.landmark || ', ' || od.city || '-' || od.pinCode || ', ' || od.state || ', ' || od.country AS address, u.email, od.price, od.orderStatus, od.orderDetailsId
-                FROM users as u
-                JOIN orders AS o
-                JOIN orderDetails AS od
-                JOIN products as p
-                WHERE o.orderId = od.orderId AND u.userId = o.userId AND od.productId = p.productId AND p.sellerId = %s;
-            """
-            orders = execute_query(query_orders, (userId,))
-
-            order_objects = []
-            for order in orders:
-                order_obj = {
-                    "id": order[0],
-                    "custName": order[1] + " " + order[2],
-                    "productName": order[3],
-                    "orderDate": order[4],
-                    "amount": order[7],
-                    "address": order[5],
-                    "email": order[6],
-                    "status": order[8],
-                    "orderDetailsId": order[9]
-                }
-                order_objects.append(order_obj)
-
-            return {
-                "message": msg,
-                "sellerOrders": {
-                    "orders": order_objects,
-                },
-                "status_code": 200,
+        order_objects = []
+        for order in orders:
+            order_obj = {
+                "id": order[0],
+                "custName": order[1] + " " + order[2],
+                "productName": order[3],
+                "orderDate": order[4],
+                "amount": order[7],
+                "address": order[5],
+                "email": order[6],
+                "status": order[8],
+                "orderDetailsId": order[9]
             }
+            order_objects.append(order_obj)
+
+        return {
+            "message": msg,
+            "sellerOrders": {
+                "orders": order_objects,
+            },
+            "status_code": 200,
+        }
     except Exception as e:
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
@@ -1255,45 +1293,55 @@ def getSellerProducts(current_user):
     userId = current_user["userId"]
     product_id = request.args.get('id')
 
+    print('product_id', product_id)
+
     if product_id != "{id}":
         try:
-            with sqlite3.connect("ecart.db") as conn:
-                cur = conn.cursor()
+            # Retrieve a single product with the given product_id
+            query_product = """
+                SELECT c.categoryId, p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, p.stock, c.name 
+                FROM products AS p
+                JOIN sellers AS s ON p.sellerId = s.sellerId
+                JOIN categories AS c ON p.categoryId = c.categoryId
+                WHERE p.sellerId = %s AND p.productId = %s;
+            """
+            product = execute_query(query_product, (userId, product_id,))
 
-                query_product = """
-                    SELECT c.categoryId, p.productId, p.name, p.newPrice, p.oldPrice, p.ratings, p.description, p.stock, c.name 
-                    FROM products AS p
-                    JOIN sellers AS s ON p.sellerId = s.sellerId
-                    JOIN categories AS c ON p.categoryId = c.categoryId
-                    WHERE p.sellerId = %s AND p.productId = %s;
-                """
-                cur.execute(query_product, (userId, product_id,))
-                product = cur.fetchone()
+           
+                    
 
+            categoryId, productId, name, newPrice, oldPrice, ratings, description, stock, categoryName = product[0]
+            if product:
+                product_obj = {
+                    "categoryId": categoryId,
+                    "productId": productId,
+                    "name": name,
+                    "newPrice": newPrice,
+                    "oldPrice": oldPrice,
+                    "ratings": ratings,
+                    "description": description,
+                    "stock": stock,
+                    "categoryName": categoryName,
+                    "images": [],
+                }
+
+                # Retrieve images for the product
                 query_images = """
                     SELECT image FROM productImages WHERE productId = %s;
                 """
-                cur.execute(query_images, (product_id,))
-                images = cur.fetchall()
-                imageArray = [image[0] for image in images]
-
-                product_obj = {
-                    "categoryId": product[0],
-                    "productId": product[1],
-                    "name": product[2],
-                    "newPrice": product[3],
-                    "oldPrice": product[4],
-                    "ratings": product[5],
-                    "description": product[6],
-                    "stock": product[7],
-                    "categoryName": product[8],
-                    "images": imageArray,
-                }
+                images = execute_query(query_images, (product_id,))
+                if images:
+                    product_obj["images"] = [bytes(image[0]).decode('utf-8') for image in images]
 
                 return {
                     "message": "Product retrieved successfully",
                     "product": product_obj,
                     "status_code": 200,
+                }
+            else:
+                return {
+                    "message": "Product not found",
+                    "status_code": 404,
                 }
 
         except Exception as e:
@@ -1301,53 +1349,58 @@ def getSellerProducts(current_user):
             return {"message": "Error occurred: " + str(e), "status_code": 500}
 
     try:
-        with sqlite3.connect("ecart.db") as conn:
-            cur = conn.cursor()
+        # Retrieve all products for the seller with images
+        query_products = """
+            SELECT c.categoryId, p.productId, p.name, p.newPrice, p.ratings, p.description, p.stock, c.name
+            FROM products AS p
+            JOIN sellers AS s ON p.sellerId = s.sellerId
+            JOIN categories AS c ON p.categoryId = c.categoryId
+            WHERE p.sellerId = %s;
+        """
 
-            query_products = """
-                SELECT c.categoryId, p.productId, p.name, p.newPrice, p.ratings, p.description, p.stock, c.name 
-                FROM products AS p
-                JOIN sellers AS s ON p.sellerId = s.sellerId
-                JOIN categories AS c ON p.categoryId = c.categoryId
-                WHERE p.sellerId = %s;
-            """
-            cur.execute(query_products, (userId,))
-            products = cur.fetchall()
-            product_objects = []
+        query_images = """
+            SELECT image FROM productImages WHERE productId = %s;
+        """
 
-            for product in products:
-                product_id = product[1]
-                query_images = """
-                    SELECT image FROM productImages WHERE productId = %s;
-                """
-                cur.execute(query_images, (product_id,))
-                images = cur.fetchall()
-                image = images[0][0] if images else None
-                product_obj = {
-                    "categoryId": product[0],
-                    "productId": product[1],
-                    "name": product[2],
-                    "price": product[3],
-                    "ratings": product[4],
-                    "description": product[5],
-                    "stock": product[6],
-                    "categoryName": product[7],
-                    "image": image,
-                }
+        
+        products = execute_query(query_products, (userId,))
+        # print(products)
+        product_objects = []
 
-                product_objects.append(product_obj)
+        for product in products:
+            product_id = product[1]
 
-            return {
-                "message": "Products retrieved successfully",
-                "sellerProducts": {
-                    "products": product_objects,
-                },
-                "status_code": 200,
+            images = execute_query(query_images, (product_id,))
+            image = images[0][0] if images else None
+
+
+            product_obj = {
+                "categoryId": product[0],
+                "productId": product[1],
+                "name": product[2],
+                "price": product[3],
+                "ratings": product[4],
+                "description": product[5],
+                "stock": product[6],
+                "categoryName": product[7],
+                "image": bytes(image).decode('utf-8') if image else None,
             }
+
+            product_objects.append(product_obj)
+            # print(product_objects)
+
+        return {
+            "message": "Products retrieved successfully",
+            "sellerProducts": {
+                "products": product_objects,
+            },
+            "status_code": 200,
+        }
 
     except Exception as e:
         traceback.print_exc()
         return {"message": "Error occurred: " + str(e), "status_code": 500}
+
 
 @app.route(sellerRoute + '/products/', methods=["POST"])
 @token_required
@@ -1356,29 +1409,28 @@ def addProduct(current_user):
     new_quantity = request.headers.get('quantity')
     product = request.get_json()
 
+    # print(product[name])
+
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        query_insert_product = '''
+            INSERT INTO products (sellerId, name, newPrice, oldPrice, ratings, categoryId, description, stock)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING productId;
+        '''
+        productId = execute_query(query_insert_product, (
+            userId, product["itemName"], product["newPrice"], product["oldPrice"],
+            0, product["categoryId"], product["description"], product["stock"]
+        ), no_return=False)[0][0]
 
-            query_insert_product = '''
-                INSERT INTO products (sellerId, name, newPrice, oldPrice, ratings, categoryId, description, stock)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING productId;
-            '''
-            cur.execute(query_insert_product, (
-                userId, product["itemName"], product["newPrice"], product["oldPrice"],
-                0, product["categoryId"], product["description"], product["stock"]
-            ))
-            productId = cur.fetchone()[0]
+        print("productId", productId)
 
-            query_insert_images = '''
-                INSERT INTO productImages (productId, image) VALUES (%s, %s);
-            '''
-            for image in product["images"]:
-                cur.execute(query_insert_images, (productId, image))
+        query_insert_images = '''
+            INSERT INTO productImages (productId, image) VALUES (%s, %s);
+        '''
+        for image in product["images"]:
+            execute_query(query_insert_images, (productId, image), no_return=True)
 
-            msg = "Added successfully"
-            conn.commit()
-            status_code = 200
+        msg = "Added successfully"
+        status_code = 200
 
         return make_response(msg, status_code)
 
@@ -1393,22 +1445,18 @@ def deleteProduct(current_user):
     productId = request.args.get('id')
 
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        query_delete_product = '''
+            DELETE FROM products WHERE productId = %s AND sellerId = %s;
+        '''
+        execute_query(query_delete_product, (productId, userId), no_return=True)
 
-            query_delete_product = '''
-                DELETE FROM products WHERE productId = %s AND sellerId = %s;
-            '''
-            cur.execute(query_delete_product, (productId, userId))
+        query_delete_images = '''
+            DELETE FROM productImages WHERE productId = %s;
+        '''
+        execute_query(query_delete_images, (productId,), no_return=True)
 
-            query_delete_images = '''
-                DELETE FROM productImages WHERE productId = %s;
-            '''
-            cur.execute(query_delete_images, (productId,))
-
-            msg = "Deleted successfully"
-            conn.commit()
-            status_code = 200
+        msg = "Deleted successfully"
+        status_code = 200
 
         return make_response(msg, status_code)
 
@@ -1424,30 +1472,27 @@ def updateProduct(current_user):
     product = request.get_json()
 
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        query_update_product = '''
+            UPDATE products 
+            SET name = %s, newPrice = %s, oldPrice = %s, categoryId = %s, description = %s, stock = %s 
+            WHERE productId = %s AND sellerId = %s;
+        '''
+        execute_query(query_update_product, (product["itemName"], product["newPrice"], product["oldPrice"], product["categoryId"], product["description"], product["stock"], product_id, userId), no_return=True)
 
-            query_update_product = '''
-                UPDATE products 
-                SET name = %s, newPrice = %s, oldPrice = %s, categoryId = %s, description = %s, stock = %s 
-                WHERE productId = %s AND sellerId = %s;
-            '''
-            cur.execute(query_update_product, (product["itemName"], product["newPrice"], product["oldPrice"], product["categoryId"], product["description"], product["stock"], product_id, userId))
+        query_delete_images = '''
+            DELETE FROM productImages WHERE productId = %s;
+        '''
+        execute_query(query_delete_images, (product_id,), no_return=True)
 
-            query_delete_images = '''
-                DELETE FROM productImages WHERE productId = %s;
-            '''
-            cur.execute(query_delete_images, (product_id,))
+        query_insert_images = '''
+            INSERT INTO productImages (productId, image) VALUES (%s, %s);
+        '''
+        images = [(product_id, image) for image in product["images"]]
+        for image in product["images"]:
+            execute_query(query_insert_images, (product_id, image), no_return=True)
 
-            query_insert_images = '''
-                INSERT INTO productImages (productId, image) VALUES (%s, %s);
-            '''
-            images = [(product_id, image) for image in product["images"]]
-            cur.executemany(query_insert_images, images)
-
-            msg = "Updated successfully"
-            conn.commit()
-            status_code = 200
+        msg = "Updated successfully"
+        status_code = 200
 
         return make_response(msg, status_code)
 
@@ -1460,17 +1505,15 @@ def updateProduct(current_user):
 @token_required
 def getProfile(current_user):
     userId = current_user["userId"]
-    
+
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        query_get_user = '''
+            SELECT * FROM users WHERE userId = %s;
+        '''
+        user = execute_query(query_get_user, (userId,))
 
-            query_get_user = '''
-                SELECT * FROM users WHERE userId = %s;
-            '''
-            cur.execute(query_get_user, (userId,))
-            user = cur.fetchone()
-
+        if user:
+            user = user[0]  # Since the query returns a list, extract the first element
             userDetails = {
                 "userId": user[0],
                 "firstName": user[4],
@@ -1487,6 +1530,8 @@ def getProfile(current_user):
                 "user": userDetails,
                 "status_code": 200,
             }
+        else:
+            return make_response("User not found", 404)
 
     except Exception as e:
         traceback.print_exc()
@@ -1497,26 +1542,21 @@ def getProfile(current_user):
 def updateProfile(current_user):
     userId = current_user["userId"]
     user = request.get_json()
-    
+
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        query_update_user = '''
+            UPDATE users SET firstName = %s, lastName = %s, address = %s, city = %s, pinCode = %s, state = %s, country = %s WHERE userId = %s;
+        '''
+        execute_query(query_update_user, (user["firstName"], user["lastName"], user["address"], user["city"], user["pinCode"], user["state"], user["country"], userId), no_return=True)
 
-            query_update_user = '''
-                UPDATE users SET firstName = %s, lastName = %s, address = %s, city = %s, pinCode = %s, state = %s, country = %s WHERE userId = %s;
-            '''
-            cur.execute(query_update_user, (user["firstName"], user["lastName"], user["address"], user["city"], user["pinCode"], user["state"], user["country"], userId))
+        msg = "Updated successfully"
+        status_code = 200
 
-            msg = "Updated successfully"
-            conn.commit()
-            status_code = 200
-
-            return make_response(msg, status_code)
+        return make_response(msg, status_code)
 
     except Exception as e:
         traceback.print_exc()
         return make_response("Error occurred", 500)
-
 
 @app.route(authRoute + '/seller/profile/', methods=["GET"])
 @token_required
@@ -1524,59 +1564,60 @@ def getSellerProfile(current_user):
     userId = current_user["userId"]
 
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        # Fetch seller details
+        query_fetch_seller = '''
+            SELECT * FROM sellers WHERE sellerId = %s;
+        '''
+        seller = execute_query(query_fetch_seller, (userId,))
 
-            # Fetch seller details
-            query_fetch_seller = '''
-                SELECT * FROM sellers WHERE sellerId = %s;
-            '''
-            cur.execute(query_fetch_seller, (userId,))
-            seller = cur.fetchone()
+        print(userId)
+        
+        # Fetch seller account details
+        query_fetch_seller_account = '''
+            SELECT * FROM sellerAccounts WHERE sellerId = %s;
+        '''
 
-            # Fetch seller account details
-            query_fetch_seller_account = '''
-                SELECT * FROM sellerAccounts WHERE sellerId = %s;
-            '''
-            cur.execute(query_fetch_seller_account, (userId,))
-            sellerAccount = cur.fetchone()
 
-            # Fetch seller categories
-            query_fetch_seller_categories = '''
-                SELECT category_id FROM sellerCategory WHERE seller_id = %s;
-            '''
-            cur.execute(query_fetch_seller_categories, (userId,))
-            sellerCategory = cur.fetchall()
-            seller_categories = [category[0] for category in sellerCategory]
+        sellerAccount = execute_query(query_fetch_seller_account, (userId,))
 
-            sellerDetails = {
-                "sellerId": seller[0],
-                "firstName": seller[1],
-                "lastName": seller[2],
-                "phoneNumber": seller[6],
-                "address": seller[7],
-                "city": seller[8],
-                "pinCode": seller[9],
-                "state": seller[10],
-                "country": seller[11],
-                "accountNumber": sellerAccount[2],
-                "accountHolderName": sellerAccount[3],
-                "bankName": sellerAccount[5],
-                "branchName": sellerAccount[6],
-                "ifscCode": sellerAccount[7],
-                "category": seller_categories
-            }
+        # print(sellerAccount)
 
-            return {
-                "message": "Seller retrieved successfully",
-                "seller": sellerDetails,
-                "status_code": 200,
-            }
+        # Fetch seller categories
+        query_fetch_seller_categories = '''
+            SELECT category_id FROM sellerCategory WHERE seller_id = %s;
+        '''
+        sellerCategory = execute_query(query_fetch_seller_categories, (userId,))
+        seller_categories = [category[0] for category in sellerCategory]
+
+        print(sellerCategory)
+
+        sellerDetails = {
+            "sellerId": seller[0][0],
+            "firstName": seller[0][1],
+            "lastName": seller[0][2],
+            "phoneNumber": seller[0][6],
+            "address": seller[0][7],
+            "city": seller[0][8],
+            "pinCode": seller[0][9],
+            "state": seller[0][10],
+            "country": seller[0][11],
+            "accountNumber": sellerAccount[0][2],
+            "accountHolderName": sellerAccount[0][3],
+            "bankName": sellerAccount[0][5],
+            "branchName": sellerAccount[0][6],
+            "ifscCode": sellerAccount[0][7],
+            "category": seller_categories
+        }
+
+        return {
+            "message": "Seller retrieved successfully",
+            "seller": sellerDetails,
+            "status_code": 200,
+        }
 
     except Exception as e:
         traceback.print_exc()
         return make_response("Error occurred", 500)
- 
 
 @app.route(authRoute + '/seller/profile/', methods=["PATCH"])
 @token_required
@@ -1585,59 +1626,58 @@ def updateSellerProfile(current_user):
     seller = request.get_json()
 
     try:
-        with sqlite3.connect('ecart.db') as conn:
-            cur = conn.cursor()
+        # Update seller details
+        query_update_seller = '''
+            UPDATE sellers
+            SET firstName = %s, lastName = %s, phoneNumber = %s, address = %s, city = %s, pinCode = %s, state = %s, country = %s
+            WHERE sellerId = %s;
+        '''
+        execute_query(query_update_seller, (seller["firstName"], seller["lastName"], seller["phoneNumber"], seller["address"], seller["city"], seller["pinCode"], seller["state"], seller["country"], userId), no_return=True)
 
-            # Update seller details
-            query_update_seller = '''
-                UPDATE sellers
-                SET firstName = %s, lastName = %s, phoneNumber = %s, address = %s, city = %s, pinCode = %s, state = %s, country = %s
-                WHERE sellerId = %s;
+        # Update seller account details
+        query_update_seller_account = '''
+            UPDATE sellerAccounts
+            SET accountNumber = %s, accountHolderName = %s, bankName = %s, branchName = %s, ifscCode = %s
+            WHERE sellerId = %s;
+        '''
+        execute_query(query_update_seller_account, (seller["accountNumber"], seller["accountHolderName"], seller["bankName"], seller["branchName"], seller["ifscCode"], userId), no_return=True) 
+
+        # Delete and insert seller categories
+        query_delete_seller_categories = '''
+            DELETE FROM sellerCategory WHERE seller_id = %s;
+        '''
+        execute_query(query_delete_seller_categories, (userId,), no_return=True)
+
+        query_insert_seller_category = '''
+            INSERT INTO sellerCategory (seller_id, category_id) VALUES (%s, %s);
+        '''
+        for category in seller["category"]:
+            # Check if category exists
+            query_select_category_id = '''
+                SELECT categoryId FROM categories WHERE name = %s;
             '''
-            cur.execute(query_update_seller, (seller["firstName"], seller["lastName"], seller["phoneNumber"], seller["address"], seller["city"], seller["pinCode"], seller["state"], seller["country"], userId))
+            category_id = execute_query(query_select_category_id, (category,))
+            if not category_id:
+                # Category does not exist, create it and get its ID
+                query_insert_category = '''
+                    INSERT INTO categories (name) VALUES (%s) RETURNING categoryId;
+                '''
+                category_id = execute_query(query_insert_category, (category,), no_return=False)[0][0]
+            else:
+                category_id = category_id[0]
 
-            # Update seller account details
-            query_update_seller_account = '''
-                UPDATE sellerAccounts
-                SET accountNumber = %s, accountHolderName = %s, bankName = %s, branchName = %s, ifscCode = %s
-                WHERE sellerId = %s;
-            '''
-            cur.execute(query_update_seller_account, (seller["accountNumber"], seller["accountHolderName"], seller["bankName"], seller["branchName"], seller["ifscCode"], userId))
+            # Insert the seller-category relationship
+            execute_query(query_insert_seller_category, (userId, category_id), no_return=True)
 
-            # Delete and insert seller categories
-            query_delete_seller_categories = '''
-                DELETE FROM sellerCategory WHERE seller_id = %s;
-            '''
-            cur.execute(query_delete_seller_categories, (userId,))
-
-            query_insert_seller_category = '''
-                INSERT INTO sellerCategory (seller_id, category_id) VALUES (%s, %s);
-            '''
-            for category in seller["category"]:
-                cur.execute('''SELECT categoryId FROM categories WHERE name = %s''', (category,))
-                category_id = cur.fetchone()
-                if category_id is None:
-                    # Category does not exist, create it and get its ID
-                    cur.execute("INSERT INTO categories (name) VALUES (%s)", (category,))
-                    category_id = cur.lastrowid
-                else:
-                    category_id = category_id[0]
-
-                # Insert the seller-category relationship
-                cur.execute(query_insert_seller_category, (userId, category_id))
-
-            msg = "Updated successfully"
-            conn.commit()
-            status_code = 200
-
-            return make_response(msg, status_code)
+        msg = "Updated successfully"
+        status_code = 200
+        return make_response(msg, status_code)
 
     except Exception as e:
         traceback.print_exc()
         msg = "Error occurred"
         status_code = 500
         return make_response(msg, status_code)
-
 
 if __name__ == "__main__":
     app.run()
