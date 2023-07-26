@@ -214,11 +214,13 @@ create_productReviews_table_query = '''CREATE TABLE productReviews
 # execute_query(create_sellers_table_query)
 # execute_query("ALTER TABLE users ALTER COLUMN salt TYPE bytea")
 
-# execute_query('''SELECT * FROM users''', (1,))
+execute_query('Select * from users')
+
+# execute_query('''Update users set lastName='Pawar' where userId = %s''', (4,))
 
 # # execute_query('''SELECT * FROM sellerAccounts''', (1,))
 # execute_query('''DELETE FROM productImages WHERE productId = %s ''', (5,))
-execute_query('''DELETE FROM users WHERE userId = %s ''', (3,))
+# execute_query('''DELETE FROM users WHERE userId = %s ''', (3,))
 
 # categories = [
 #     "Electronics",

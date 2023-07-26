@@ -96,7 +96,7 @@ export default function Review() {
             </ListItem>
             <ListItemAvatar>
               <img
-                src={product.image}
+                src={product.images[0]}
                 alt="Product"
                 style={{
                   width: "300px",
@@ -107,7 +107,7 @@ export default function Review() {
             </ListItemAvatar>
             <ListItem sx={{ py: 1, px: 0 }}>
               <ListItemText primary={product.name + " Price"} />
-              <Typography variant="body2">₹{product.price}</Typography>
+              <Typography variant="body2">₹{product.newPrice}</Typography>
             </ListItem>
             <ListItem sx={{ py: 1, px: 0 }}>
               <ListItemText primary="Shipping charges" />

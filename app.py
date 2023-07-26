@@ -329,7 +329,7 @@ def getProducts():
             # Convert the image binary data to bytes
             
             if image is not None:
-                image = bytes(image[0]).decode('utf-8')
+                image = bytes(image).decode('utf-8')
 
             if categoryId not in categoryData:
                 categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
@@ -398,7 +398,7 @@ def cartItems(current_user):
             'productId': productId,
             'name': name,
             'price': price,
-            'image': image,
+            'image': bytes(image).decode('utf-8'),
             'category': categoryName,
             'quantity': quantity
         })
@@ -457,7 +457,7 @@ def addToCart(current_user):
             msg = "Quantity updated successfully"
         else:
             # If the product doesn't exist, add a new entry with quantity 1 for the current user
-            execute_query(query_insert, (userId, productId, 1))
+            execute_query(query_insert, (userId, productId, 1), no_return=True)
             msg = "Added successfully"
 
         status_code = 200
@@ -477,7 +477,7 @@ def removeFromCart(current_user):
     query = "DELETE FROM kart WHERE productId = %s"
 
     try:
-        execute_query(query, (productId,))
+        execute_query(query, (productId,), no_return=True)
         msg = "Removed successfully"
         status_code = 200
     except Exception as e:
@@ -503,7 +503,7 @@ def updateQuantity(current_user):
     """
 
     try:
-        execute_query(query_update, (new_quantity, productId))
+        execute_query(query_update, (new_quantity, productId), no_return=True)
         msg = "Quantity updated successfully"
 
         # Fetch the updated product data
@@ -585,7 +585,7 @@ def placeOrder(current_user):
             datetime.now(),
             "Order Placed"
         )
-        execute_query(query_insert_order_details, order_details_data)
+        execute_query(query_insert_order_details, order_details_data, no_return=True)
 
         msg = "Order placed successfully"
         status_code = 200
@@ -741,10 +741,10 @@ def getOrders(current_user):
                     "quantity": quantity,
                     "price": productPrice,
                     "shipping": address,
-                    "image": productImage,
+                    "image": bytes(productImage).decode('utf-8'),
                     "payment": "Credit Card",  # Replace with appropriate payment method
                     "status": "Delivered",  # Replace with appropriate order status
-                    "deliveryDate": orderDate.strftime("%Y-%m-%d %H:%M:%S"),
+                    "deliveryDate": datetime.strptime(orderDate, "%Y-%m-%d %H:%M:%S.%f").strftime("%Y-%m-%d %H:%M:%S")    
                 }
 
                 orders.append(orderItem)
