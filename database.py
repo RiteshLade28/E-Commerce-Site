@@ -166,76 +166,8 @@ create_productReviews_table_query = '''CREATE TABLE productReviews
         )'''
 
 
-# execute_query(create_categories_table_query)
-# execute_query(create_products_table_query)
-# execute_query(create_users_table_query)
-# execute_query(create_kart_table_query)
-# execute_query(create_payments_table_query)
-# execute_query(create_orders_table_query)
-# execute_query(create_orderDetails_table_query)
-# execute_query(create_sellers_table_query)
-# execute_query(create_sellerCategory_table_query)
-# execute_query(create_sellerAccounts_table_query)
-# execute_query(create_productImages_table_query)
-# execute_query(create_productReviews_table_query)
 
-# execute_query("DROP TABLE IF EXISTS orderDetails CASCADE")
-
-# execute_query("DROP TABLE IF EXISTS products CASCADE")
-# execute_query(create_products_table_query)
-
-# # execute_query("DROP TABLE IF EXISTS sellercategory CASCADE")
-# # execute_query(create_sellerCategory_table_query)
-
-# # execute_query("DROP TABLE IF EXISTS categories CASCADE")
-# # execute_query(create_categories_table_query)
-
-# # execute_query(create_orderDetails_table_query)
-
-# execute_query("DROP TABLE IF EXISTS orders CASCADE")
-# # execute_query(create_orders_table_query)
-
-# execute_query("DROP TABLE IF EXISTS payments CASCADE")
-# # execute_query(create_payments_table_query)
-
-# execute_query("DROP TABLE IF EXISTS sellers CASCADE")
-# # execute_query(create_sellers_table_query)
-
-# execute_query("DROP TABLE IF EXISTS sellerAccounts CASCADE")
-# # execute_query(create_sellerAccounts_table_query)
-
-# execute_query("DROP TABLE IF EXISTS productImages CASCADE ")
-# # execute_query(create_productImages_table_query)
-
-# execute_query("DROP TABLE IF EXISTS productReviews CASCADE")
-# # execute_query(create_productReviews_table_query)
-
-# execute_query("DROP TABLE IF EXISTS sellers CASCADE")
-# execute_query(create_sellers_table_query)
-# execute_query("ALTER TABLE users ALTER COLUMN salt TYPE bytea")
-
-execute_query('Select * from users')
-
-# execute_query('''Update users set lastName='Pawar' where userId = %s''', (4,))
-
-# # execute_query('''SELECT * FROM sellerAccounts''', (1,))
-# execute_query('''DELETE FROM productImages WHERE productId = %s ''', (5,))
-# execute_query('''DELETE FROM users WHERE userId = %s ''', (3,))
-
-# categories = [
-#     "Electronics",
-#     "Fashion",
-#     "Sports",
-#     "Home",
-#     "Beauty",
-#     "Toys",
-#     "Grocery",
-#     "Books",
-# ]
-
-# for category in categories:
-#     query = f"INSERT INTO categories (name) VALUES ('{category}')"
-#     execute_query(query)
+execute_query('delete from products', (1,))
 
 
 

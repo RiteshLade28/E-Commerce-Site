@@ -66,7 +66,7 @@ function App() {
           path="/seller/editProduct/:productId"
         />
         <Route element={<Profile />} path="/profile" />
-        <Route element={<SellerProfile />} path="/seller/account"/>
+        <Route element={<SellerProfile />} path="/seller/account" />
       </Routes>
 
       {shouldShowNavBarAndFooter && <Footer />}
