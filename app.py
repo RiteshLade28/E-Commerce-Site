@@ -1066,18 +1066,22 @@ def getSellerDashboard(current_user):
             FROM products p
             JOIN productImages i ON p.productId = i.productId
             WHERE p.sellerId = %s
-            GROUP BY p.productId;
+            GROUP BY p.productId, i.image;
         """
         latestProducts = execute_query(query_latest_products, (userId,))
 
+        for product in latestProducts:
+            product['image'] = bytes(product['image']).decode('utf-8')
+        
+
         # Retrieve orders
         query_orders = """
-            SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.price, od.orderStatus ,od.productId
-            FROM users as u
-            JOIN orders AS o
-            JOIN orderDetails AS od
-            JOIN products as p
-            WHERE o.orderId = od.orderId and u.userId = o.userId and od.productId = p.productId and p.sellerId = %s;
+            SELECT o.orderId, u.firstName, u.lastName, p.name, od.orderDate, od.price, od.orderStatus, od.productId
+            FROM users AS u
+            JOIN orders AS o ON u.userId = o.userId
+            JOIN orderDetails AS od ON o.orderId = od.orderId
+            JOIN products AS p ON od.productId = p.productId
+            WHERE p.sellerId = %s;
         """
         orders = execute_query(query_orders, (userId,))
 
@@ -1105,19 +1109,25 @@ def getSellerDashboard(current_user):
                 JOIN products AS p ON od.productId = p.productId
                 WHERE od.orderStatus = 'Order Placed' 
                 AND p.sellerId = %s
-                AND EXTRACT(YEAR FROM od.orderDate) = 2023
-                AND EXTRACT(MONTH FROM od.orderDate) = %s
+                AND EXTRACT(YEAR FROM TO_DATE(od.orderDate, 'YYYY-MM-DD')) = 2023
+                AND EXTRACT(MONTH FROM TO_DATE(od.orderDate, 'YYYY-MM-DD')) = %s
             """
+
+
+
+
+
             total_sales = execute_query(query_sales_data, (userId, month_number))[0][0]
             sales_data.append({'month': month_name, 'sales': total_sales})
 
         # Retrieve product counts
         query_product_counts = """
             SELECT p.name, count(p.productId)
-            FROM orders as o JOIN orderDetails as od JOIN products as p 
-            ON o.orderId = od.orderId and od.productId = p.productId
+            FROM orders as o 
+            JOIN orderDetails as od ON o.orderId = od.orderId 
+            JOIN products as p ON od.productId = p.productId
             WHERE p.sellerId = %s
-            GROUP BY p.newPrice
+            GROUP BY p.newPrice, p.name
         """
         product_counts = execute_query(query_product_counts, (userId,))
 

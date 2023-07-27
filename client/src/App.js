@@ -57,7 +57,10 @@ function App() {
         <Route element={<Login />} path="/login" />
         <Route element={<BeASeller />} path="/sellerSignup" />
         <Route element={<SellerLogin />} path="/sellerLogin" />
-        <Route element={<Dashboard />} path="/seller/dashboard" />
+        <Route
+          element={<Layout component={Dashboard} />}
+          path="/seller/dashboard"
+        />
         <Route element={<Products />} path="/seller/products" />
         <Route element={<SellerOrders />} path="/seller/orders" />
         <Route element={<AddProduct />} path="/seller/addProduct" />
