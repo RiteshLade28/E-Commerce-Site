@@ -276,18 +276,18 @@ def getProducts():
                         p.productId,
                         p.name,
                         p.newPrice,
+                        p.oldPrice,
                         p.categoryId,
                         i.image
                     FROM products p
                     JOIN (
-                        SELECT DISTINCT ON (productId) -- Ensure distinct images per product
+                        SELECT DISTINCT ON (productId) 
                             productId,
                             image
                         FROM productImages
-                        ORDER BY productId, image -- Choose which image to select (you can use any desired ordering)
+                        ORDER BY productId, image 
                     ) i ON p.productId = i.productId
-                    WHERE p.categoryId = %s;
-
+                    WHERE p.categoryId = %s;    
                     ''',
                     (categoryId,),
                 )
@@ -296,13 +296,13 @@ def getProducts():
 
                 relatedProducts = []
                 for item in categoryData:
-                    productId, name, price, categoryId, image = item
+                    productId, name, newPrice, oldPrice, categoryId, image = item
                     relatedProducts.append({
                         'productId': productId,
                         'categoryId': categoryId,
                         'newPrice': newPrice,
                         'oldPrice': oldPrice,
-                        'price': price,
+                        'name': name,
                         'image': bytes(image).decode('utf-8'),
                     })
 
@@ -315,32 +315,40 @@ def getProducts():
     try:
         # Retrieve product data with images from PostgreSQL
         query_product_data = '''
-            SELECT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name, i.image AS categoryName
-            FROM products AS p
+            SELECT DISTINCT p.productId, p.name, p.newPrice, p.oldPrice, c.categoryId, c.name, i.image AS categoryName
+            FROM products AS p JOIN (
+                        SELECT DISTINCT ON (productId) 
+                            productId,
+                            image
+                        FROM productImages
+                        ORDER BY productId, image 
+                    ) as i ON p.productId = i.productId
             INNER JOIN categories AS c ON p.categoryId = c.categoryId
-            LEFT JOIN productImages AS i ON p.productId = i.productId
+
         '''
         itemData = execute_query(query_product_data)
+        # print(itemData)
 
         categoryData = {}
         for item in itemData:
-            productId, name, newPrice, oldPrice, categoryId, categoryName, image,  = item
-
+            productId, name, newPrice, oldPrice, categoryId, categoryName, image = item
             # Convert the image binary data to bytes
-            
             if image is not None:
                 image = bytes(image).decode('utf-8')
 
             if categoryId not in categoryData:
                 categoryData[categoryId] = {'categoryName': categoryName, 'products': []}
-                categoryData[categoryId]['products'].append({
-                    'productId': productId,
-                    'categoryId': categoryId,
-                    'name': name,
-                    'newPrice': newPrice,
-                    'oldPrice': oldPrice,
-                    'image': image,
+
+            categoryData[categoryId]['products'].append({
+                'productId': productId,
+                'categoryId': categoryId,
+                'name': name,
+                'newPrice': newPrice,
+                'oldPrice': oldPrice,
+                'image': image,
             })
+
+        # print(categoryData)
 
         formattedData = []
         for categoryId, categoryInfo in categoryData.items():

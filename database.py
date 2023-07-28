@@ -167,7 +167,7 @@ create_productReviews_table_query = '''CREATE TABLE productReviews
 
 
 
-execute_query('select * from products', (1,))
+execute_query('''SELECT * from products''', (1,))
 
 
 
